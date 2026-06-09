@@ -38,6 +38,7 @@ const PAGE_META: Record<string, { title: string; icon: React.ReactNode }> = {
   '/templates/email':     { title: 'Email Templates',     icon: <LayoutTemplate size={18} /> },
   '/settings':            { title: 'Settings',            icon: <Settings size={18} /> },
   '/profile':             { title: 'My Profile',          icon: <User size={18} /> },
+  '/change-password':     { title: 'Change Password',      icon: <KeyRound size={18} /> },
 };
 
 type TopbarProps = {

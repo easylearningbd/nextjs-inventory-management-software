@@ -190,11 +190,8 @@ export default function ProfileForm({ user }: { user: UserSnapshot }) {
             Cancel
           </Link>
         </div>
-      </div>
-
-      <div className="dash-foot">
-        All Rights Reserved &copy; 2026 <a href="#">GildedGlow</a>
-      </div>
+      </div> 
+     
     </form>
   );
 }

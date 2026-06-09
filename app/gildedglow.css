@@ -489,6 +489,13 @@ button { font-family: inherit; }
 .auth-error { display: flex; align-items: center; gap: var(--sp-2); background: var(--danger-bg); color: var(--danger-fg); border: 1px solid #f1c3bc; border-radius: var(--r-md); padding: 12px 16px; font-size: 14px; font-weight: 500; margin-bottom: var(--sp-6); }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* ============================================= PASSWORD SHOW/HIDE TOGGLE */
+.gg-input-pwd { position: relative; }
+.gg-input-pwd .gg-input { padding-right: 48px; }
+.gg-pwd-toggle { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); background: none; border: none; padding: 0; cursor: pointer; color: var(--gray-400); display: grid; place-items: center; line-height: 0; }
+.gg-pwd-toggle:hover { color: var(--gray-600); }
+.gg-pwd-toggle svg { width: 18px; height: 18px; }
+
 /* ===================================================== CREATE / EDIT PAGES */
 .page-head { display: flex; align-items: center; margin-bottom: var(--sp-6); }
 .page-head .gg-page-title { flex: 1; }

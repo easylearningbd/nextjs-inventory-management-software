@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./gildedglow.css";
+import ToasterProvider from "@/components/ToasterProvider";
 
 export const metadata: Metadata = {
   title: "GildedGlow",
@@ -21,7 +22,10 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        <ToasterProvider />
+      </body>
     </html>
   );
 }
