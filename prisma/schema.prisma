@@ -19,3 +19,21 @@ model User {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
+model Warehouse {
+  id          Int       @id @default(autoincrement())
+  name        String
+  email       String?
+  phoneNumber String?
+  country     String?
+  city        String?
+  zipCode     String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  // Soft-delete: null = active, non-null = deleted.
+  // Hard-deletes are intentionally avoided because warehouses will be
+  // referenced by stock, sales, and purchases records.
+  deletedAt   DateTime?
+
+  @@index([deletedAt])
+}

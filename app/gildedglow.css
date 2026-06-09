@@ -489,6 +489,37 @@ button { font-family: inherit; }
 .auth-error { display: flex; align-items: center; gap: var(--sp-2); background: var(--danger-bg); color: var(--danger-fg); border: 1px solid #f1c3bc; border-radius: var(--r-md); padding: 12px 16px; font-size: 14px; font-weight: 500; margin-bottom: var(--sp-6); }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* ================================================================ SPACER */
+.gg-spacer { flex: 1; }
+
+/* ================================================================ ROW ACTIONS (list pages) */
+.row-acts { display: inline-flex; align-items: center; gap: 6px; }
+.row-acts a, .row-acts button {
+  width: 32px; height: 32px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: var(--r-sm); border: none; background: transparent;
+  cursor: pointer; transition: background .15s; text-decoration: none;
+}
+.row-acts a:hover, .row-acts button:hover { background: var(--gray-100); }
+.row-acts a svg, .row-acts button svg { width: 17px; height: 17px; }
+.row-acts .act-edit { color: var(--info-fg); }
+.row-acts .act-del  { color: var(--danger); }
+
+/* ================================================================ MULTI-LINE CELL */
+.ppl-cell { display: flex; flex-direction: column; gap: 3px; }
+.ppl-cell .nm { font-family: var(--font-display); font-weight: 600; color: var(--gold-700); font-size: 14px; cursor: pointer; }
+.ppl-cell .nm:hover { text-decoration: underline; }
+.ppl-cell .em { color: var(--gray-600); font-size: 13px; }
+
+/* ================================================================ EMPTY STATE */
+.gg-empty-state {
+  display: flex; flex-direction: column; align-items: center;
+  padding: var(--sp-16) var(--sp-8);
+  color: var(--gray-500); font-size: var(--text-base); text-align: center;
+  gap: var(--sp-2);
+}
+.gg-empty-state p { margin: 0; }
+
 /* ============================================= PASSWORD SHOW/HIDE TOGGLE */
 .gg-input-pwd { position: relative; }
 .gg-input-pwd .gg-input { padding-right: 48px; }
