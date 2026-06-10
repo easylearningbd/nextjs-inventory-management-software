@@ -4,10 +4,11 @@ import bcrypt from "bcryptjs";
 const db = new PrismaClient();
 
 async function main() {
+  // ── Admin user ──────────────────────────────────────────────────────────────
   const hashed = await bcrypt.hash("Admin@1234", 12);
 
   const admin = await db.user.upsert({
-    where: { email: "admin@gildedglow.com" },
+    where:  { email: "admin@gildedglow.com" },
     update: {},
     create: {
       firstName:   "Admin",
@@ -21,6 +22,23 @@ async function main() {
   });
 
   console.log(`Seeded admin user → id: ${admin.id}  email: ${admin.email}`);
+
+  // ── Default / walk-in customer ──────────────────────────────────────────────
+  // "direct-customer" is the POS fallback used when no specific customer is
+  // selected. It must always exist and must never be deleted.
+  // isDefault=true is the guard flag checked by the delete action.
+  const directCustomer = await db.customer.upsert({
+    where:  { id: 1 },
+    update: {},
+    create: {
+      name:        "direct-customer",
+      email:       "customer@gildedglow.com",
+      phoneNumber: null,
+      isDefault:   true,
+    },
+  });
+
+  console.log(`Seeded default customer → id: ${directCustomer.id}  name: ${directCustomer.name}`);
 }
 
 main()

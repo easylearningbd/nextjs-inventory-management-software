@@ -54,3 +54,26 @@ model Supplier {
 
   @@index([deletedAt])
 }
+
+model Customer {
+  id          Int       @id @default(autoincrement())
+  name        String
+  email       String?
+  phoneNumber String?
+  dateOfBirth DateTime?
+  country     String?
+  city        String?
+  // TEXT column — addresses can be multi-line and exceed VARCHAR(191).
+  address     String?   @db.Text
+  // Marks the protected walk-in / POS default customer ("direct-customer").
+  // This record must never be soft-deleted; it is created by the seed script.
+  isDefault   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  // Soft-delete: null = active, non-null = deleted.
+  // Hard-deletes avoided because customers are referenced by sales/quotations.
+  deletedAt   DateTime?
+
+  @@index([deletedAt])
+  @@index([isDefault])
+}

@@ -33,6 +33,7 @@ const PAGE_META: Record<string, { title: string; icon: React.ReactNode }> = {
   '/warehouse':           { title: 'Warehouse',           icon: <Warehouse size={18} /> },
   '/warehouse/create':    { title: 'Create Warehouse',    icon: <Warehouse size={18} /> },
   '/suppliers/create':    { title: 'Create Supplier',     icon: <Users size={18} /> },
+  '/customers/create':    { title: 'Create Customer',     icon: <Users size={18} /> },
   '/reports':             { title: 'Reports',             icon: <BarChart3 size={18} /> },
   '/currencies':          { title: 'Currencies',          icon: <DollarSign size={18} /> },
   '/languages':           { title: 'Languages',           icon: <Languages size={18} /> },
@@ -59,6 +60,8 @@ export default function Topbar({ onToggleSidebar, userName, userInitial }: Topba
       ? { title: 'Edit Warehouse', icon: <Warehouse size={18} /> }
       : /^\/suppliers\/\d+\/edit$/.test(pathname)
       ? { title: 'Edit Supplier',  icon: <Users size={18} /> }
+      : /^\/customers\/\d+\/edit$/.test(pathname)
+      ? { title: 'Edit Customer',  icon: <Users size={18} /> }
       : undefined);
 
   const [open, setOpen] = useState(false);
