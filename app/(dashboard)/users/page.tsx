@@ -202,9 +202,7 @@ export default async function UsersPage({
         </div>
       </div>
 
-      <div className="dash-foot">
-        All Rights Reserved &copy; 2026 <a href="#">GildedGlow</a>
-      </div>
+       
     </>
   );
 }

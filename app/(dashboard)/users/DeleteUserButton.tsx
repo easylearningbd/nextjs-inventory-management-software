@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Trash2, X, AlertTriangle, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { deleteUser } from './actions';
 
 type Props = { id: number; name: string; isCurrentUser: boolean };
 
@@ -18,9 +19,16 @@ export default function DeleteUserButton({ id, name, isCurrentUser }: Props) {
 
   function handleConfirm() {
     startTransition(async () => {
-      // Delete action wired in Step 4 (soft-delete + last-admin guard).
-      void id;
-      setOpen(false);
+      const result = await deleteUser(id);
+
+      if (result.success) {
+        setOpen(false);
+        toast.success(`"${name}" has been deleted.`);
+        router.refresh();
+      } else {
+        setOpen(false);
+        toast.error(result.error ?? 'Failed to delete user.');
+      }
     });
   }
 
