@@ -48,6 +48,19 @@ model Brand {
   @@index([deletedAt])
 }
 
+model Category {
+  id        Int       @id @default(autoincrement())
+  name      String
+  logo      String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  // Soft-delete: null = active, non-null = deleted.
+  // Hard-deletes avoided because products will reference this category.
+  deletedAt DateTime?
+
+  @@index([deletedAt])
+}
+
 model Warehouse {
   id          Int       @id @default(autoincrement())
   name        String
