@@ -511,6 +511,9 @@ button { font-family: inherit; }
 .row-acts .act-del  { color: var(--danger); }
 
 /* ================================================================ MULTI-LINE CELL */
+.ppl-name { display: flex; align-items: center; gap: var(--sp-3); }
+.ppl-ava  { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, var(--gold-500), var(--gold-700)); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-family: var(--font-display); font-weight: 600; font-size: 14px; flex: none; overflow: hidden; }
+.ppl-ava img { width: 100%; height: 100%; object-fit: cover; }
 .ppl-cell { display: flex; flex-direction: column; gap: 3px; }
 .ppl-cell .nm { font-family: var(--font-display); font-weight: 600; color: var(--gold-700); font-size: 14px; cursor: pointer; }
 .ppl-cell .nm:hover { text-decoration: underline; }

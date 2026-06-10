@@ -8,16 +8,31 @@ datasource db {
 }
 
 model User {
-  id          Int      @id @default(autoincrement())
+  id          Int       @id @default(autoincrement())
   firstName   String
   lastName    String
-  email       String   @unique
+  email       String    @unique
   password    String
   phoneNumber String?
   image       String?
-  role        String   @default("user")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  role        String    @default("user")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  // Soft-delete: null = active, non-null = deleted.
+  // Hard-deletes are avoided — users own audit trails and uploaded assets.
+  deletedAt   DateTime?
+
+  @@index([deletedAt])
+}
+
+// Lookup table for valid staff roles (admin, manager, cashier, user …).
+// The Users create/edit form populates the Role dropdown from this table,
+// not from hardcoded strings, so new roles can be added without code changes.
+model Role {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Warehouse {

@@ -22,7 +22,9 @@ export const { handlers, auth, signIn, signOut, unstable_update: updateSession }
 
         const { email, password } = parsed.data
 
-        const user = await db.user.findUnique({ where: { email } })
+        // findFirst so we can also filter out soft-deleted accounts.
+        // findUnique only accepts unique-constraint fields in WHERE.
+        const user = await db.user.findFirst({ where: { email, deletedAt: null } })
         if (!user) return null
 
         const passwordMatch = await bcrypt.compare(password, user.password)

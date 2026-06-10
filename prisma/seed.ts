@@ -39,6 +39,15 @@ async function main() {
   });
 
   console.log(`Seeded default customer → id: ${directCustomer.id}  name: ${directCustomer.name}`);
+
+  // ── Default roles ───────────────────────────────────────────────────────────
+  // These populate the Role dropdown on the Users create/edit form.
+  // Names are lowercase to match the User.role String field convention.
+  const roles = ['admin', 'manager', 'cashier', 'user'];
+  for (const name of roles) {
+    await db.role.upsert({ where: { name }, update: {}, create: { name } });
+  }
+  console.log(`Seeded roles: ${roles.join(', ')}`);
 }
 
 main()
