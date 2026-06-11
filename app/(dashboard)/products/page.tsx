@@ -5,8 +5,9 @@ import {
   ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight,
 } from 'lucide-react';
 import { db } from '@/lib/db';
-import ProductSearch  from './ProductSearch';
-import ProductPerPage from './ProductPerPage';
+import ProductSearch       from './ProductSearch';
+import ProductPerPage      from './ProductPerPage';
+import DeleteProductButton from './DeleteProductButton';
 
 const PER_OPTIONS = [10, 25, 50];
 
@@ -210,10 +211,7 @@ export default async function ProductsPage({
                           <Link href={`/products/${p.id}/edit`}  className="act-edit" title="Edit">
                             <Pencil size={17} />
                           </Link>
-                          {/* Delete button wired in Step 6 */}
-                          <button type="button" className="act-del" title="Delete" disabled>
-                            <Trash2 size={17} />
-                          </button>
+                          <DeleteProductButton id={p.id} name={p.name} />
                         </div>
                       </td>
                     </tr>
