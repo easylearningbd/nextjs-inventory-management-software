@@ -127,6 +127,20 @@ model Customer {
   @@index([isDefault])
 }
 
+// Measurement units shown in the Product Unit dropdown.
+// Managed via the /units CRUD page (not yet built).
+// Product.productUnit stores the name as a string — no FK — so renaming a unit
+// doesn't silently change historical product records.
+model Unit {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([deletedAt])
+}
+
 model Product {
   id                 Int       @id @default(autoincrement())
   name               String

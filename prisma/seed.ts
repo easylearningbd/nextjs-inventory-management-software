@@ -48,6 +48,14 @@ async function main() {
     await db.role.upsert({ where: { name }, update: {}, create: { name } });
   }
   console.log(`Seeded roles: ${roles.join(', ')}`);
+
+  // ── Default product units ────────────────────────────────────────────────────
+  // These populate the Product Unit dropdown on the Products create/edit form.
+  const units = ['Piece', 'Kilogram', 'Gram', 'Meter', 'Centimeter', 'Liter', 'Milliliter', 'Box', 'Dozen', 'Pack', 'Set', 'Bottle', 'Bag', 'Roll'];
+  for (const name of units) {
+    await db.unit.upsert({ where: { name }, update: {}, create: { name } });
+  }
+  console.log(`Seeded units: ${units.join(', ')}`);
 }
 
 main()
