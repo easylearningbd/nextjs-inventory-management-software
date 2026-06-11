@@ -19,6 +19,7 @@ const PAGE_META: Record<string, { title: string; icon: React.ReactNode }> = {
   '/product-categories':  { title: 'Product Categories',  icon: <Boxes size={18} /> },
   '/brands':              { title: 'Brands',              icon: <Boxes size={18} /> },
   '/adjustments':         { title: 'Adjustments',         icon: <SlidersHorizontal size={18} /> },
+  '/adjustments/create':  { title: 'Create Adjustment',   icon: <SlidersHorizontal size={18} /> },
   '/quotations':          { title: 'Quotations',          icon: <FileText size={18} /> },
   '/purchases':           { title: 'Purchases',           icon: <Receipt size={18} /> },
   '/purchases-returns':   { title: 'Purchases Returns',   icon: <Receipt size={18} /> },
@@ -55,22 +56,18 @@ type TopbarProps = {
 export default function Topbar({ onToggleSidebar, userName, userInitial }: TopbarProps) {
   const pathname = usePathname();
 
-  // Exact-match first; fall back to pattern-matching for dynamic segments.
-  const meta =
-    PAGE_META[pathname] ??
-    (/^\/products\/\d+\/edit$/.test(pathname)
-      ? { title: 'Edit Product',   icon: <Boxes size={18} /> }
-      : /^\/products\/\d+$/.test(pathname)
-      ? { title: 'View Product',   icon: <Boxes size={18} /> }
-      : /^\/warehouse\/\d+\/edit$/.test(pathname)
-      ? { title: 'Edit Warehouse', icon: <Warehouse size={18} /> }
-      : /^\/suppliers\/\d+\/edit$/.test(pathname)
-      ? { title: 'Edit Supplier',  icon: <Users size={18} /> }
-      : /^\/customers\/\d+\/edit$/.test(pathname)
-      ? { title: 'Edit Customer',  icon: <Users size={18} /> }
-      : /^\/users\/\d+\/edit$/.test(pathname)
-      ? { title: 'Edit User',      icon: <User size={18} /> }
-      : undefined);
+  // Exact-match first; fall back to regex for dynamic segments.
+  type PageMeta = { title: string; icon: React.ReactNode };
+  let meta: PageMeta | undefined = PAGE_META[pathname];
+  if (!meta) {
+    if      (/^\/adjustments\/\d+$/.test(pathname))    meta = { title: 'View Adjustment', icon: <SlidersHorizontal size={18} /> };
+    else if (/^\/products\/\d+\/edit$/.test(pathname)) meta = { title: 'Edit Product',     icon: <Boxes size={18} /> };
+    else if (/^\/products\/\d+$/.test(pathname))       meta = { title: 'View Product',     icon: <Boxes size={18} /> };
+    else if (/^\/warehouse\/\d+\/edit$/.test(pathname))meta = { title: 'Edit Warehouse',   icon: <Warehouse size={18} /> };
+    else if (/^\/suppliers\/\d+\/edit$/.test(pathname))meta = { title: 'Edit Supplier',    icon: <Users size={18} /> };
+    else if (/^\/customers\/\d+\/edit$/.test(pathname))meta = { title: 'Edit Customer',    icon: <Users size={18} /> };
+    else if (/^\/users\/\d+\/edit$/.test(pathname))    meta = { title: 'Edit User',        icon: <User size={18} /> };
+  }
 
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);

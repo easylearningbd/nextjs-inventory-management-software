@@ -617,3 +617,10 @@ button { font-family: inherit; }
 /* Image gallery on view page */
 .prod-gallery { display: flex; flex-wrap: wrap; gap: var(--sp-3); }
 .prod-gallery-img { width: 100px; height: 100px; border-radius: var(--r-md); border: 1px solid var(--gray-200); object-fit: cover; background: var(--gray-100); }
+
+/* ============================================================ ADJUSTMENTS */
+/* Top two-field row: Warehouse + Date */
+.adj-top { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-6); margin-bottom: var(--sp-6); }
+@media (max-width: 640px) { .adj-top { grid-template-columns: 1fr; } }
+/* Stock quantity chip shown in order-items table (warning palette) */
+.stock-chip { display: inline-flex; align-items: center; height: 26px; padding: 0 12px; border-radius: var(--r-sm); background: var(--warning-bg); color: var(--warning-fg); font-weight: 600; font-size: 13px; }
