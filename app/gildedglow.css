@@ -624,3 +624,16 @@ button { font-family: inherit; }
 @media (max-width: 640px) { .adj-top { grid-template-columns: 1fr; } }
 /* Stock quantity chip shown in order-items table (warning palette) */
 .stock-chip { display: inline-flex; align-items: center; height: 26px; padding: 0 12px; border-radius: var(--r-sm); background: var(--warning-bg); color: var(--warning-fg); font-weight: 600; font-size: 13px; }
+/* Product search autocomplete dropdown */
+.adj-search-results { position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 20; background: var(--surface); border: 1px solid var(--gray-200); border-radius: var(--r-md); box-shadow: var(--shadow-md); max-height: 280px; overflow-y: auto; }
+.adj-search-item { display: flex; align-items: center; gap: var(--sp-3); width: 100%; padding: var(--sp-3) var(--sp-4); border: none; border-bottom: 1px solid var(--gray-100); background: transparent; cursor: pointer; text-align: left; transition: background .12s; font-family: var(--font-body); font-size: 14px; }
+.adj-search-item:last-child { border-bottom: none; }
+.adj-search-item:hover:not(:disabled) { background: var(--gold-50); }
+.adj-search-item:disabled { opacity: .5; cursor: default; }
+.adj-search-name { flex: 1; font-weight: 500; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.adj-search-empty { margin: 0; padding: var(--sp-4); color: var(--gray-400); font-size: 13px; text-align: center; }
+/* View page — 2-column info panel grid */
+.adj-view-meta { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-5); margin-bottom: var(--sp-5); }
+@media (max-width: 720px) { .adj-view-meta { grid-template-columns: 1fr; } }
+/* Centred document-title line inside view card */
+.adj-doc-title { text-align: center; font-family: var(--font-display); font-weight: 700; font-size: 18px; color: var(--ink); margin-bottom: var(--sp-6); padding-bottom: var(--sp-5); border-bottom: 1px solid var(--gray-150); }
