@@ -4,7 +4,7 @@ import { useActionState, useEffect, useRef, useState, useTransition } from 'reac
 import { useRouter } from 'next/navigation';
 import { Search, Minus, Plus, Trash2, Pencil, Check, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { createPurchase, searchProductsForPurchase } from './actions';
+import { createPurchase, updatePurchase, searchProductsForPurchase } from './actions';
 import type { ActionResult, SearchProductForPurchase } from './actions';
 import { lineSubtotal, orderGrandTotal } from '@/lib/pricing';
 
@@ -29,11 +29,24 @@ export type LineItem = {
   purchaseUnit: string;
 };
 
+export type InitialValues = {
+  id:           number;
+  date:         string;
+  warehouseId:  number;
+  supplierId:   number;
+  status:       'Received' | 'Ordered' | 'Pending';
+  orderTaxPct:  number;
+  flatDiscount: number;
+  shipping:     number;
+  notes:        string;
+  items:        LineItem[];
+};
+
 type Props = {
   warehouses: Warehouse[];
   suppliers:  Supplier[];
   units:      Unit[];
-  // edit mode will pass initial values in Step 7
+  initial?:   InitialValues;
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -44,36 +57,38 @@ function fmt(n: number) {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function PurchaseForm({ warehouses, suppliers, units }: Props) {
+export default function PurchaseForm({ warehouses, suppliers, units, initial }: Props) {
   const router = useRouter();
+  const isEdit = !!initial?.id;
+
   const [state, formAction, isPending] = useActionState<ActionResult, FormData>(
-    createPurchase,
+    isEdit ? updatePurchase : createPurchase,
     {},
   );
 
   // ── Header state ──────────────────────────────────────────────────────────
-  const [date, setDate]             = useState(() => new Date().toISOString().slice(0, 10));
-  const [warehouseId, setWarehouseId] = useState<number | ''>('');
-  const [supplierId,  setSupplierId]  = useState<number | ''>('');
+  const [date,        setDate]        = useState(() => initial?.date ?? new Date().toISOString().slice(0, 10));
+  const [warehouseId, setWarehouseId] = useState<number | ''>(() => initial?.warehouseId ?? '');
+  const [supplierId,  setSupplierId]  = useState<number | ''>(() => initial?.supplierId  ?? '');
 
   // ── Line items ────────────────────────────────────────────────────────────
-  const [items, setItems] = useState<LineItem[]>([]);
+  const [items, setItems] = useState<LineItem[]>(() => initial?.items ?? []);
 
   // ── Below-table order-level fields ───────────────────────────────────────
-  const [orderTaxPct,   setOrderTaxPct]   = useState(0);
-  const [flatDiscount,  setFlatDiscount]  = useState(0);
-  const [shipping,      setShipping]      = useState(0);
-  const [status, setStatus] = useState<'Received' | 'Pending' | 'Ordered'>('Received');
-  const [notes,  setNotes]  = useState('');
+  const [orderTaxPct,  setOrderTaxPct]  = useState(() => initial?.orderTaxPct  ?? 0);
+  const [flatDiscount, setFlatDiscount] = useState(() => initial?.flatDiscount ?? 0);
+  const [shipping,     setShipping]     = useState(() => initial?.shipping     ?? 0);
+  const [status, setStatus] = useState<'Received' | 'Ordered' | 'Pending'>(() => initial?.status ?? 'Received');
+  const [notes,  setNotes]  = useState(() => initial?.notes ?? '');
 
   // ── Per-line edit modal state ─────────────────────────────────────────────
-  const [modalItem,    setModalItem]    = useState<LineItem | null>(null);
-  const [modalCost,    setModalCost]    = useState('');
-  const [modalTaxType, setModalTaxType] = useState<'Inclusive' | 'Exclusive'>('Exclusive');
+  const [modalItem,     setModalItem]     = useState<LineItem | null>(null);
+  const [modalCost,     setModalCost]     = useState('');
+  const [modalTaxType,  setModalTaxType]  = useState<'Inclusive' | 'Exclusive'>('Exclusive');
   const [modalOrderTax, setModalOrderTax] = useState('');
   const [modalDiscType, setModalDiscType] = useState<'Fixed' | 'Percentage'>('Fixed');
-  const [modalDisc,    setModalDisc]    = useState('');
-  const [modalUnit,    setModalUnit]    = useState('');
+  const [modalDisc,     setModalDisc]     = useState('');
+  const [modalUnit,     setModalUnit]     = useState('');
 
   // ── Product search ────────────────────────────────────────────────────────
   const [query,       setQuery]       = useState('');
@@ -83,12 +98,13 @@ export default function PurchaseForm({ warehouses, suppliers, units }: Props) {
   const searchTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   // ── Toast / redirect on action response ──────────────────────────────────
+  const initialId = initial?.id;
   useEffect(() => {
     if (state.error)   toast.error(state.error);
-    if (state.success) router.push('/purchases');
-  }, [state, router]);
+    if (state.success) router.push(initialId ? `/purchases/${initialId}` : '/purchases');
+  }, [state, router, initialId]);
 
-  // ── Warehouse change — reset items (stock reference resets too) ───────────
+  // ── Warehouse change — reset items (stock references reset too) ───────────
   function handleWarehouseChange(e: React.ChangeEvent<HTMLSelectElement>) {
     const val = e.target.value;
     setWarehouseId(val ? parseInt(val, 10) : '');
@@ -166,9 +182,9 @@ export default function PurchaseForm({ warehouses, suppliers, units }: Props) {
 
   function saveModal() {
     if (!modalItem) return;
-    const cost    = parseFloat(modalCost)    || 0;
-    const tax     = parseFloat(modalOrderTax) || 0;
-    const disc    = parseFloat(modalDisc)    || 0;
+    const cost = parseFloat(modalCost)     || 0;
+    const tax  = parseFloat(modalOrderTax) || 0;
+    const disc = parseFloat(modalDisc)     || 0;
     setItems((prev) =>
       prev.map((i) =>
         i.productId === modalItem.productId
@@ -201,7 +217,7 @@ export default function PurchaseForm({ warehouses, suppliers, units }: Props) {
     flatDiscount,
     shipping,
   });
-  const subtotalsSum  = items.reduce((s, i) => s + lineSubtotal({
+  const subtotalsSum = items.reduce((s, i) => s + lineSubtotal({
     netUnitCost: i.netUnitCost, quantity: i.quantity,
     discountType: i.discountType, discount: i.discount,
     taxType: i.taxType, orderTax: i.orderTax,
@@ -221,6 +237,11 @@ export default function PurchaseForm({ warehouses, suppliers, units }: Props) {
     <>
       <form action={formAction}>
         <div className="gg-card gg-card-pad">
+
+          {/* Hidden fields */}
+          {isEdit && <input type="hidden" name="purchaseId" value={initial!.id} />}
+          <input type="hidden" name="items"      value={itemsJson} />
+          <input type="hidden" name="grandTotal" value={grand.toString()} />
 
           {/* ── Header: Date / Warehouse / Supplier ──────────────────────── */}
           <div className="pur-top">
@@ -339,11 +360,11 @@ export default function PurchaseForm({ warehouses, suppliers, units }: Props) {
                   </tr>
                 ) : (
                   items.map((item) => {
-                    const gross    = item.netUnitCost * item.quantity;
-                    const discAmt  = item.discountType === 'Percentage'
+                    const gross   = item.netUnitCost * item.quantity;
+                    const discAmt = item.discountType === 'Percentage'
                       ? gross * item.discount / 100
                       : item.discount;
-                    const taxAmt   = item.taxType === 'Exclusive'
+                    const taxAmt  = item.taxType === 'Exclusive'
                       ? (gross - discAmt) * item.orderTax / 100
                       : 0;
                     const sub = lineSubtotal({
@@ -353,7 +374,6 @@ export default function PurchaseForm({ warehouses, suppliers, units }: Props) {
                     });
                     return (
                       <tr key={item.productId}>
-                        {/* Product: code + name + pencil */}
                         <td>
                           <div className="prod-cell">
                             <span className="prod-code">{item.code}</span>
@@ -370,15 +390,12 @@ export default function PurchaseForm({ warehouses, suppliers, units }: Props) {
                             </span>
                           </div>
                         </td>
-                        {/* Net unit cost */}
                         <td className="gg-num">{fmt(item.netUnitCost)}</td>
-                        {/* Stock reference */}
                         <td>
                           <span className="stock-chip gg-num">
                             {item.currentStock}&nbsp;{item.purchaseUnit}
                           </span>
                         </td>
-                        {/* Qty stepper */}
                         <td>
                           <div className="gg-stepper">
                             <button type="button" onClick={() => updateQty(item.productId, item.quantity - 1)}>
@@ -396,13 +413,9 @@ export default function PurchaseForm({ warehouses, suppliers, units }: Props) {
                             </button>
                           </div>
                         </td>
-                        {/* Discount amount */}
                         <td className="gg-num">{fmt(discAmt)}</td>
-                        {/* Tax amount */}
                         <td className="gg-num">{fmt(taxAmt)}</td>
-                        {/* Subtotal */}
                         <td className="gg-num gg-td-strong">{fmt(sub)}</td>
-                        {/* Remove */}
                         <td style={{ textAlign: 'right' }}>
                           <button
                             type="button"
@@ -422,7 +435,7 @@ export default function PurchaseForm({ warehouses, suppliers, units }: Props) {
             </table>
           </div>
 
-          {/* ── Below-table: Order Tax / Discount / Shipping + Totals box ── */}
+          {/* ── Totals box ─────────────────────────────────────────────────── */}
           <div className="pur-totals-box">
             <div className="pur-totals-row">
               <span className="ptr-lbl">Order Tax</span>
@@ -442,6 +455,7 @@ export default function PurchaseForm({ warehouses, suppliers, units }: Props) {
             </div>
           </div>
 
+          {/* ── Below-table inputs ─────────────────────────────────────────── */}
           <div className="pur-below">
             <div className="gg-field">
               <label className="gg-label">Order Tax</label>
@@ -516,10 +530,6 @@ export default function PurchaseForm({ warehouses, suppliers, units }: Props) {
             />
           </div>
 
-          {/* Hidden serialised payload */}
-          <input type="hidden" name="items"        value={itemsJson} />
-          <input type="hidden" name="grandTotal"   value={grand.toString()} />
-
           {/* ── Form actions ───────────────────────────────────────────────── */}
           <div className="gg-form-actions">
             <button
@@ -529,7 +539,7 @@ export default function PurchaseForm({ warehouses, suppliers, units }: Props) {
             >
               {isPending
                 ? <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> Saving…</>
-                : <><Check size={16} /> Save</>}
+                : <><Check size={16} /> {isEdit ? 'Update' : 'Save'}</>}
             </button>
             <button
               type="button"

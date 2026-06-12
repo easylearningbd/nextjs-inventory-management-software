@@ -245,6 +245,199 @@ export async function createPurchase(
   return { success: true };
 }
 
+// ── Update purchase ───────────────────────────────────────────────────────────
+
+export async function updatePurchase(
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  // 1. Permission check
+  const denied = await requirePermission();
+  if (denied) return { error: denied };
+
+  // 2. Parse purchaseId
+  const purchaseId = parseInt(formData.get('purchaseId') as string, 10);
+  if (isNaN(purchaseId) || purchaseId <= 0) return { error: 'Invalid purchase ID.' };
+
+  // 3. Parse header fields (same as createPurchase)
+  const dateStr   = (formData.get('date')        as string)?.trim();
+  const whIdRaw   = formData.get('warehouseId')  as string;
+  const supIdRaw  = formData.get('supplierId')   as string;
+  const statusRaw = (formData.get('status')      as string)?.trim();
+  const notes     = (formData.get('notes')       as string)?.trim() || null;
+
+  const warehouseId = parseInt(whIdRaw,  10);
+  const supplierId  = parseInt(supIdRaw, 10);
+
+  if (!dateStr)                                   return { error: 'Date is required.' };
+  if (isNaN(warehouseId) || warehouseId <= 0)     return { error: 'Warehouse is required.' };
+  if (isNaN(supplierId)  || supplierId  <= 0)     return { error: 'Supplier is required.' };
+  if (!STATUSES.includes(statusRaw as typeof STATUSES[number])) {
+    return { error: 'Invalid status.' };
+  }
+
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return { error: 'Invalid date.' };
+
+  const status = statusRaw as typeof STATUSES[number];
+
+  // 4. Parse order-level numbers
+  const orderTaxPct  = parseFloat(formData.get('orderTaxPct')  as string) || 0;
+  const flatDiscount = parseFloat(formData.get('flatDiscount') as string) || 0;
+  const shipping     = parseFloat(formData.get('shipping')     as string) || 0;
+
+  if (orderTaxPct  < 0 || orderTaxPct  > 100) return { error: 'Order tax must be 0–100%.' };
+  if (flatDiscount < 0)                        return { error: 'Discount cannot be negative.' };
+  if (shipping     < 0)                        return { error: 'Shipping cannot be negative.' };
+
+  // 5. Parse + validate line items
+  let rawItems: unknown;
+  try {
+    rawItems = JSON.parse((formData.get('items') as string) ?? '[]');
+  } catch {
+    return { error: 'Invalid items payload.' };
+  }
+
+  const itemsResult = z
+    .array(itemSchema)
+    .min(1, 'At least one item is required.')
+    .safeParse(rawItems);
+
+  if (!itemsResult.success) {
+    return { error: itemsResult.error.issues[0]?.message ?? 'Validation failed.' };
+  }
+  const items = itemsResult.data;
+
+  // 6. Re-read all IDs server-side (never trust client-supplied values)
+  const [warehouse, supplier] = await Promise.all([
+    db.warehouse.findFirst({ where: { id: warehouseId, deletedAt: null }, select: { id: true } }),
+    db.supplier.findFirst({ where: { id: supplierId,  deletedAt: null }, select: { id: true } }),
+  ]);
+  if (!warehouse) return { error: 'Selected warehouse not found.' };
+  if (!supplier)  return { error: 'Selected supplier not found.' };
+
+  const uniqueProductIds = [...new Set(items.map((i) => i.productId))];
+  const activeProducts   = await db.product.findMany({
+    where:  { id: { in: uniqueProductIds }, deletedAt: null },
+    select: { id: true },
+  });
+  if (activeProducts.length !== uniqueProductIds.length) {
+    return { error: 'One or more selected products could not be found or have been deleted.' };
+  }
+
+  // 7. Fetch existing purchase for stock delta computation
+  const existing = await db.purchase.findFirst({
+    where:   { id: purchaseId, deletedAt: null },
+    include: { items: { select: { productId: true, quantity: true } } },
+  });
+  if (!existing) return { error: 'Purchase not found.' };
+
+  // 8. Recompute all totals server-side
+  const lineInputs = items.map((item) => ({
+    netUnitCost:  item.netUnitCost,
+    quantity:     item.quantity,
+    discountType: item.discountType,
+    discount:     item.discount,
+    taxType:      item.taxType,
+    orderTax:     item.orderTax,
+  }));
+
+  const grand = orderGrandTotal({ lines: lineInputs, orderTaxPct, flatDiscount, shipping });
+
+  // 9. Atomic transaction: update header + replace items + reconcile stock
+  try {
+    await db.$transaction(async (tx) => {
+      // Update purchase header
+      await tx.purchase.update({
+        where: { id: purchaseId },
+        data: {
+          supplierId:  supplier.id,
+          warehouseId: warehouse.id,
+          date,
+          status,
+          orderTax:   orderTaxPct.toFixed(2),
+          discount:   flatDiscount.toFixed(2),
+          shipping:   shipping.toFixed(2),
+          grandTotal: grand.toFixed(2),
+          notes:      notes ?? undefined,
+        },
+      });
+
+      // Replace all line items
+      await tx.purchaseItem.deleteMany({ where: { purchaseId } });
+      for (let idx = 0; idx < items.length; idx++) {
+        const item = items[idx];
+        const sub  = lineSubtotal(lineInputs[idx]);
+        await tx.purchaseItem.create({
+          data: {
+            purchaseId,
+            productId:    item.productId,
+            netUnitCost:  item.netUnitCost.toFixed(2),
+            quantity:     item.quantity,
+            discountType: item.discountType,
+            discount:     item.discount.toFixed(2),
+            taxType:      item.taxType,
+            orderTax:     item.orderTax.toFixed(2),
+            subtotal:     sub.toFixed(2),
+            purchaseUnit: item.purchaseUnit,
+          },
+        });
+      }
+
+      // Stock reconciliation via unified delta map.
+      // Using a map<warehouseId, map<productId, netDelta>> so that:
+      //   - same warehouse + same product: old negatives and new positives cancel out
+      //   - warehouse change: separate entries prevent crossing between warehouses
+      const changeMap = new Map<number, Map<number, number>>();
+
+      function addDelta(wid: number, pid: number, qty: number) {
+        if (!changeMap.has(wid)) changeMap.set(wid, new Map());
+        const m = changeMap.get(wid)!;
+        m.set(pid, (m.get(pid) ?? 0) + qty);
+      }
+
+      // Subtract old received quantities from the old warehouse
+      if (existing.status === 'Received') {
+        for (const oi of existing.items) {
+          addDelta(existing.warehouseId, oi.productId, -oi.quantity);
+        }
+      }
+
+      // Add new received quantities to the new warehouse
+      if (status === 'Received') {
+        for (const item of items) {
+          addDelta(warehouse.id, item.productId, item.quantity);
+        }
+      }
+
+      // Apply net deltas
+      for (const [wid, productMap] of changeMap) {
+        for (const [pid, delta] of productMap) {
+          if (delta > 0) await applyStockAdjustment(tx, pid, wid, delta, 'Addition');
+          if (delta < 0) await applyStockAdjustment(tx, pid, wid, Math.abs(delta), 'Subtraction');
+        }
+      }
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Failed to update purchase.';
+    return { error: msg };
+  }
+
+  // 10. Revalidate affected pages
+  const allProductIds = [
+    ...new Set([...existing.items.map((i) => i.productId), ...uniqueProductIds]),
+  ];
+  revalidatePath('/purchases');
+  revalidatePath(`/purchases/${purchaseId}`);
+  revalidatePath('/products');
+  for (const id of allProductIds) {
+    revalidatePath(`/products/${id}`);
+    revalidatePath(`/products/${id}/edit`);
+  }
+
+  return { success: true };
+}
+
 // ── Delete purchase ───────────────────────────────────────────────────────────
 // Pending / Ordered: soft-delete immediately.
 // Received: blocked until Step 8 adds full stock reversal.
