@@ -637,3 +637,25 @@ button { font-family: inherit; }
 @media (max-width: 720px) { .adj-view-meta { grid-template-columns: 1fr; } }
 /* Centred document-title line inside view card */
 .adj-doc-title { text-align: center; font-family: var(--font-display); font-weight: 700; font-size: 18px; color: var(--ink); margin-bottom: var(--sp-6); padding-bottom: var(--sp-5); border-bottom: 1px solid var(--gray-150); }
+
+/* ============================================================ PURCHASES */
+/* 3-column header: Date / Warehouse / Supplier */
+.pur-top { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--sp-6); margin-bottom: var(--sp-6); }
+@media (max-width: 780px) { .pur-top { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 500px) { .pur-top { grid-template-columns: 1fr; } }
+/* Product cell in the items table: code on top, name + pencil on bottom */
+.prod-cell { display: flex; flex-direction: column; gap: 4px; }
+.prod-code { font-family: var(--font-display); font-weight: 600; color: var(--ink); font-size: 14px; }
+.prod-name-row { display: inline-flex; align-items: center; gap: 6px; }
+.prod-edit { width: 26px; height: 26px; border-radius: var(--r-sm); border: none; background: var(--info-bg); color: var(--info); display: grid; place-items: center; cursor: pointer; flex-shrink: 0; }
+.prod-edit svg { width: 14px; height: 14px; }
+/* Below-table three-input row: Order Tax / Discount / Shipping */
+.pur-below { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--sp-6); margin-top: var(--sp-8); }
+@media (max-width: 780px) { .pur-below { grid-template-columns: 1fr 1fr; } }
+/* Grand-total summary box (right-aligned) */
+.pur-totals-box { width: 100%; max-width: 480px; margin-left: auto; border: 1px solid var(--gray-200); border-radius: var(--r-md); overflow: hidden; margin-top: var(--sp-6); }
+.pur-totals-row { display: flex; justify-content: space-between; padding: 14px var(--sp-5); border-bottom: 1px solid var(--gray-150); font-size: 14px; }
+.pur-totals-row:last-child { border-bottom: none; }
+.pur-totals-row .ptr-lbl { color: var(--gray-600); }
+.pur-totals-row.ptr-grand .ptr-lbl,
+.pur-totals-row.ptr-grand .ptr-val { color: var(--primary); font-family: var(--font-display); font-weight: 700; font-size: 16px; }
