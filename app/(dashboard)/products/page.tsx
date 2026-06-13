@@ -1,13 +1,13 @@
 import Link from 'next/link';
 import type { Prisma } from '@prisma/client';
 import {
-  Plus, Pencil, Eye, Trash2, Boxes, Filter, Upload, Download,
+  Plus, Boxes, Filter, Upload, Download,
   ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight,
 } from 'lucide-react';
 import { db } from '@/lib/db';
-import ProductSearch       from './ProductSearch';
-import ProductPerPage      from './ProductPerPage';
-import DeleteProductButton from './DeleteProductButton';
+import ProductSearch    from './ProductSearch';
+import ProductPerPage   from './ProductPerPage';
+import ProductRowMenu   from './ProductRowMenu';
 
 const PER_OPTIONS = [10, 25, 50];
 
@@ -204,15 +204,7 @@ export default async function ProductsPage({
 
                       {/* Actions */}
                       <td style={{ textAlign: 'right' }}>
-                        <div className="row-acts">
-                          <Link href={`/products/${p.id}`}       className="act-view" title="View">
-                            <Eye size={17} />
-                          </Link>
-                          <Link href={`/products/${p.id}/edit`}  className="act-edit" title="Edit">
-                            <Pencil size={17} />
-                          </Link>
-                          <DeleteProductButton id={p.id} name={p.name} />
-                        </div>
+                        <ProductRowMenu id={p.id} name={p.name} />
                       </td>
                     </tr>
                   );

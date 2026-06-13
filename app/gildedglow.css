@@ -410,6 +410,7 @@ button { font-family: inherit; }
 
 /* row-action dropdown menu */
 .gg-menu {
+  position: absolute; right: 0; top: calc(100% + 4px); z-index: 50;
   min-width: 196px; background: var(--surface); border: 1px solid var(--gray-200);
   border-radius: var(--r-md); box-shadow: var(--shadow-lg); padding: var(--sp-2);
 }

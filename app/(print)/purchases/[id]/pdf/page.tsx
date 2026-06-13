@@ -1,7 +1,6 @@
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, User, Mail, Smartphone, MapPin } from 'lucide-react';
-import { auth } from '@/auth';
 import { db } from '@/lib/db';
 import PrintTrigger from './PrintTrigger';
 
@@ -43,9 +42,6 @@ export default async function PurchasePDFPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const session = await auth();
-  if (!session) redirect('/');
-
   const { id: idStr } = await params;
   const id = parseInt(idStr, 10);
   if (isNaN(id)) notFound();
@@ -96,12 +92,11 @@ export default async function PurchasePDFPage({
   const supAddress = [sup.address, sup.city, sup.country].filter(Boolean).join(', ') || '—';
 
   return (
-    <>
-      {/* Auto-triggers window.print() on mount */}
+    <div style={{ minHeight: '100vh', background: 'var(--canvas)', padding: 'var(--sp-6)' }}>
       <PrintTrigger />
 
-      {/* Toolbar — hidden when printing via @media print .pur-noprint */}
-      <div className="page-head pur-noprint">
+      {/* Toolbar — hidden when printing */}
+      <div className="page-head pur-noprint" style={{ marginBottom: 'var(--sp-6)' }}>
         <h1 className="gg-page-title">Purchase PDF</h1>
         <Link href={`/purchases/${id}`} className="gg-btn gg-btn--secondary gg-btn--sm">
           <ArrowLeft size={16} /> Back
@@ -243,6 +238,6 @@ export default async function PurchasePDFPage({
         )}
 
       </div>
-    </>
+    </div>
   );
 }
