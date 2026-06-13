@@ -22,7 +22,8 @@ const PAGE_META: Record<string, { title: string; icon: React.ReactNode }> = {
   '/adjustments/create':  { title: 'Create Adjustment',   icon: <SlidersHorizontal size={18} /> },
   '/quotations':          { title: 'Quotations',          icon: <FileText size={18} /> },
   '/purchases':           { title: 'Purchases',           icon: <Receipt size={18} /> },
-  '/purchases-returns':   { title: 'Purchases Returns',   icon: <Receipt size={18} /> },
+  '/purchases/returns':          { title: 'Purchases Returns',        icon: <Receipt size={18} /> },
+  '/purchases/returns/create':   { title: 'Create Purchase Return',   icon: <Receipt size={18} /> },
   '/sales':               { title: 'Sales',               icon: <ShoppingCart size={18} /> },
   '/sales-returns':       { title: 'Sales Returns',       icon: <ShoppingCart size={18} /> },
   '/transfers':           { title: 'Transfers',           icon: <Repeat size={18} /> },
@@ -60,13 +61,19 @@ export default function Topbar({ onToggleSidebar, userName, userInitial }: Topba
   type PageMeta = { title: string; icon: React.ReactNode };
   let meta: PageMeta | undefined = PAGE_META[pathname];
   if (!meta) {
-    if      (/^\/adjustments\/\d+$/.test(pathname))    meta = { title: 'View Adjustment', icon: <SlidersHorizontal size={18} /> };
-    else if (/^\/products\/\d+\/edit$/.test(pathname)) meta = { title: 'Edit Product',     icon: <Boxes size={18} /> };
-    else if (/^\/products\/\d+$/.test(pathname))       meta = { title: 'View Product',     icon: <Boxes size={18} /> };
-    else if (/^\/warehouse\/\d+\/edit$/.test(pathname))meta = { title: 'Edit Warehouse',   icon: <Warehouse size={18} /> };
-    else if (/^\/suppliers\/\d+\/edit$/.test(pathname))meta = { title: 'Edit Supplier',    icon: <Users size={18} /> };
-    else if (/^\/customers\/\d+\/edit$/.test(pathname))meta = { title: 'Edit Customer',    icon: <Users size={18} /> };
-    else if (/^\/users\/\d+\/edit$/.test(pathname))    meta = { title: 'Edit User',        icon: <User size={18} /> };
+    if      (/^\/adjustments\/\d+$/.test(pathname))               meta = { title: 'View Adjustment',       icon: <SlidersHorizontal size={18} /> };
+    else if (/^\/products\/\d+\/edit$/.test(pathname))            meta = { title: 'Edit Product',          icon: <Boxes size={18} /> };
+    else if (/^\/products\/\d+$/.test(pathname))                  meta = { title: 'View Product',          icon: <Boxes size={18} /> };
+    else if (/^\/warehouse\/\d+\/edit$/.test(pathname))           meta = { title: 'Edit Warehouse',        icon: <Warehouse size={18} /> };
+    else if (/^\/suppliers\/\d+\/edit$/.test(pathname))           meta = { title: 'Edit Supplier',         icon: <Users size={18} /> };
+    else if (/^\/customers\/\d+\/edit$/.test(pathname))           meta = { title: 'Edit Customer',         icon: <Users size={18} /> };
+    else if (/^\/users\/\d+\/edit$/.test(pathname))               meta = { title: 'Edit User',             icon: <User size={18} /> };
+    else if (/^\/purchases\/returns\/\d+\/pdf$/.test(pathname))   meta = { title: 'Purchase Return PDF',   icon: <Receipt size={18} /> };
+    else if (/^\/purchases\/returns\/\d+\/edit$/.test(pathname))  meta = { title: 'Edit Purchase Return',  icon: <Receipt size={18} /> };
+    else if (/^\/purchases\/returns\/\d+$/.test(pathname))        meta = { title: 'View Purchase Return',  icon: <Receipt size={18} /> };
+    else if (/^\/purchases\/\d+\/pdf$/.test(pathname))            meta = { title: 'Purchase PDF',          icon: <Receipt size={18} /> };
+    else if (/^\/purchases\/\d+\/edit$/.test(pathname))           meta = { title: 'Edit Purchase',         icon: <Receipt size={18} /> };
+    else if (/^\/purchases\/\d+$/.test(pathname))                 meta = { title: 'View Purchase',         icon: <Receipt size={18} /> };
   }
 
   const [open, setOpen] = useState(false);

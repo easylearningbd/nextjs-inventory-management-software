@@ -54,7 +54,7 @@ const NAV: NavItem[] = [
     icon: <Receipt />,
     children: [
       { label: 'Purchases', href: '/purchases' },
-      { label: 'Purchases Returns', href: '/purchases-returns' },
+      { label: 'Purchases Returns', href: '/purchases/returns' },
     ],
   },
   {

@@ -80,9 +80,10 @@ model Warehouse {
   // referenced by stock, sales, and purchases records.
   deletedAt   DateTime?
 
-  stocks      ProductStock[]
-  adjustments Adjustment[]
-  purchases   Purchase[]
+  stocks          ProductStock[]
+  adjustments     Adjustment[]
+  purchases       Purchase[]
+  purchaseReturns PurchaseReturn[]
 
   @@index([deletedAt])
 }
@@ -101,8 +102,9 @@ model Supplier {
   // Hard-deletes are avoided because suppliers will be referenced by purchases.
   deletedAt   DateTime?
 
-  stocks    ProductStock[]
-  purchases Purchase[]
+  stocks          ProductStock[]
+  purchases       Purchase[]
+  purchaseReturns PurchaseReturn[]
 
   @@index([deletedAt])
 }
@@ -168,11 +170,12 @@ model Product {
   // Hard-delete is blocked if the product is referenced by purchases/sales.
   deletedAt          DateTime?
 
-  category        Category         @relation(fields: [categoryId], references: [id])
-  brand           Brand            @relation(fields: [brandId], references: [id])
-  stocks          ProductStock[]
-  adjustmentItems AdjustmentItem[]
-  purchaseItems   PurchaseItem[]
+  category           Category            @relation(fields: [categoryId], references: [id])
+  brand              Brand               @relation(fields: [brandId], references: [id])
+  stocks             ProductStock[]
+  adjustmentItems    AdjustmentItem[]
+  purchaseItems      PurchaseItem[]
+  purchaseReturnItems PurchaseReturnItem[]
 
   @@index([deletedAt])
   @@index([categoryId])
@@ -270,9 +273,10 @@ model Purchase {
   updatedAt     DateTime  @updatedAt
   deletedAt     DateTime?
 
-  supplier  Supplier       @relation(fields: [supplierId], references: [id])
-  warehouse Warehouse      @relation(fields: [warehouseId], references: [id])
+  supplier  Supplier         @relation(fields: [supplierId], references: [id])
+  warehouse Warehouse        @relation(fields: [warehouseId], references: [id])
   items     PurchaseItem[]
+  returns   PurchaseReturn[]
 
   @@index([deletedAt])
   @@index([supplierId])
@@ -306,5 +310,81 @@ model PurchaseItem {
   product  Product  @relation(fields: [productId], references: [id])
 
   @@index([purchaseId])
+  @@index([productId])
+}
+
+// ── Purchase Returns ──────────────────────────────────────────────────────────
+// A PurchaseReturn is a stock-outbound document: warehouse → supplier.
+// When status = "Received", each line DECREMENTS ProductStock for the chosen
+// warehouse via the stock service inside a $transaction.
+// Deleting a Received return ADDS stock back (undoes the outbound movement).
+model PurchaseReturn {
+  id          Int       @id @default(autoincrement())
+  // Human-readable reference, e.g. "PR_0001". Generated after insert so the
+  // autoincrement id is available; temporarily stored as TEMP_<ts>_<rand>.
+  reference   String    @unique
+  supplierId  Int
+  warehouseId Int
+  // Optional back-reference to the original purchase this return is for.
+  purchaseId  Int?
+  date        DateTime
+  // Pending | Ordered | Received
+  status      String    @default("Received")
+  // Order-level tax as a percentage applied to the sum of line subtotals.
+  orderTax    Decimal   @default(0) @db.Decimal(5, 2)
+  // Order-level flat discount in base currency.
+  discount    Decimal   @default(0) @db.Decimal(12, 2)
+  // Flat shipping cost added to the total.
+  shipping    Decimal   @default(0) @db.Decimal(12, 2)
+  // Server-computed from line subtotals + order tax/discount/shipping.
+  grandTotal  Decimal   @db.Decimal(14, 2)
+  // Amount already refunded/settled by the supplier.
+  paid        Decimal   @default(0) @db.Decimal(12, 2)
+  // due = grandTotal − paid, stored for fast list queries.
+  due         Decimal   @default(0) @db.Decimal(12, 2)
+  // Cash | Card | Cheque | Bank Transfer
+  paymentType String    @default("Cash")
+  notes       String?   @db.Text
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  supplier  Supplier            @relation(fields: [supplierId], references: [id])
+  warehouse Warehouse           @relation(fields: [warehouseId], references: [id])
+  purchase  Purchase?           @relation(fields: [purchaseId], references: [id])
+  items     PurchaseReturnItem[]
+
+  @@index([deletedAt])
+  @@index([supplierId])
+  @@index([warehouseId])
+  @@index([purchaseId])
+  @@index([status])
+}
+
+// One line of a PurchaseReturn document.
+model PurchaseReturnItem {
+  id           Int     @id @default(autoincrement())
+  returnId     Int
+  productId    Int
+  // Unit cost at the time of the return.
+  netUnitCost  Decimal @db.Decimal(12, 2)
+  quantity     Int
+  // Fixed | Percentage
+  discountType String  @default("Fixed")
+  discount     Decimal @default(0) @db.Decimal(12, 2)
+  // Inclusive | Exclusive
+  taxType      String  @default("Exclusive")
+  // Per-line tax rate as a percentage.
+  orderTax     Decimal @default(0) @db.Decimal(5, 2)
+  // Server-computed: unitCost×qty adjusted for discount and tax.
+  subtotal     Decimal @db.Decimal(14, 2)
+  // Unit label carried forward from the product or original purchase line.
+  returnUnit   String
+  createdAt    DateTime @default(now())
+
+  purchaseReturn PurchaseReturn @relation(fields: [returnId], references: [id])
+  product        Product        @relation(fields: [productId], references: [id])
+
+  @@index([returnId])
   @@index([productId])
 }
