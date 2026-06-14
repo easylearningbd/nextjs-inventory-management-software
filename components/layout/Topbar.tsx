@@ -25,6 +25,7 @@ const PAGE_META: Record<string, { title: string; icon: React.ReactNode }> = {
   '/purchases/returns':          { title: 'Purchases Returns',        icon: <Receipt size={18} /> },
   '/purchases/returns/create':   { title: 'Create Purchase Return',   icon: <Receipt size={18} /> },
   '/sales':               { title: 'Sales',               icon: <ShoppingCart size={18} /> },
+  '/sales/create':        { title: 'Create Sale',         icon: <ShoppingCart size={18} /> },
   '/sales-returns':       { title: 'Sales Returns',       icon: <ShoppingCart size={18} /> },
   '/transfers':           { title: 'Transfers',           icon: <Repeat size={18} /> },
   '/expenses':            { title: 'Expenses',            icon: <Wallet size={18} /> },
@@ -68,6 +69,9 @@ export default function Topbar({ onToggleSidebar, userName, userInitial }: Topba
     else if (/^\/suppliers\/\d+\/edit$/.test(pathname))           meta = { title: 'Edit Supplier',         icon: <Users size={18} /> };
     else if (/^\/customers\/\d+\/edit$/.test(pathname))           meta = { title: 'Edit Customer',         icon: <Users size={18} /> };
     else if (/^\/users\/\d+\/edit$/.test(pathname))               meta = { title: 'Edit User',             icon: <User size={18} /> };
+    else if (/^\/sales\/\d+\/pdf$/.test(pathname))                meta = { title: 'Sale PDF',              icon: <ShoppingCart size={18} /> };
+    else if (/^\/sales\/\d+\/edit$/.test(pathname))               meta = { title: 'Edit Sale',             icon: <ShoppingCart size={18} /> };
+    else if (/^\/sales\/\d+$/.test(pathname))                     meta = { title: 'View Sale',             icon: <ShoppingCart size={18} /> };
     else if (/^\/purchases\/returns\/\d+\/pdf$/.test(pathname))   meta = { title: 'Purchase Return PDF',   icon: <Receipt size={18} /> };
     else if (/^\/purchases\/returns\/\d+\/edit$/.test(pathname))  meta = { title: 'Edit Purchase Return',  icon: <Receipt size={18} /> };
     else if (/^\/purchases\/returns\/\d+$/.test(pathname))        meta = { title: 'View Purchase Return',  icon: <Receipt size={18} /> };

@@ -84,6 +84,7 @@ model Warehouse {
   adjustments     Adjustment[]
   purchases       Purchase[]
   purchaseReturns PurchaseReturn[]
+  sales           Sale[]
 
   @@index([deletedAt])
 }
@@ -127,6 +128,8 @@ model Customer {
   // Soft-delete: null = active, non-null = deleted.
   // Hard-deletes avoided because customers are referenced by sales/quotations.
   deletedAt   DateTime?
+
+  sales     Sale[]
 
   @@index([deletedAt])
   @@index([isDefault])
@@ -172,10 +175,11 @@ model Product {
 
   category           Category            @relation(fields: [categoryId], references: [id])
   brand              Brand               @relation(fields: [brandId], references: [id])
-  stocks             ProductStock[]
-  adjustmentItems    AdjustmentItem[]
-  purchaseItems      PurchaseItem[]
+  stocks              ProductStock[]
+  adjustmentItems     AdjustmentItem[]
+  purchaseItems       PurchaseItem[]
   purchaseReturnItems PurchaseReturnItem[]
+  saleItems           SaleItem[]
 
   @@index([deletedAt])
   @@index([categoryId])
@@ -387,4 +391,97 @@ model PurchaseReturnItem {
 
   @@index([returnId])
   @@index([productId])
+}
+
+// ── Sales ─────────────────────────────────────────────────────────────────────
+// A Sale is a stock-outbound document: warehouse → customer.
+// When status = "Received", each line DECREMENTS ProductStock for the chosen
+// warehouse via the stock service inside a $transaction.
+// Deleting a Received sale ADDS stock back (undoes the outbound movement).
+model Sale {
+  id            Int       @id @default(autoincrement())
+  // Human-readable reference, e.g. "SA_0001". Generated after insert so the
+  // autoincrement id is available; temporarily stored as TEMP_<ts>_<rand>.
+  reference     String    @unique
+  customerId    Int
+  warehouseId   Int
+  date          DateTime
+  // Pending | Ordered | Received
+  status        String    @default("Received")
+  // Order-level tax as a percentage applied to the sum of line subtotals.
+  orderTax      Decimal   @default(0) @db.Decimal(5, 2)
+  // Order-level flat discount in base currency.
+  discount      Decimal   @default(0) @db.Decimal(12, 2)
+  // Flat shipping cost added to the total.
+  shipping      Decimal   @default(0) @db.Decimal(12, 2)
+  // Server-computed from line subtotals + order tax/discount/shipping.
+  grandTotal    Decimal   @db.Decimal(14, 2)
+  // Sum of all SalePayment.amount rows; derived and stored for fast queries.
+  paid          Decimal   @default(0) @db.Decimal(12, 2)
+  // due = grandTotal − paid, stored for fast list queries.
+  due           Decimal   @default(0) @db.Decimal(12, 2)
+  // Paid | Unpaid | Partial — always derived from paid vs grandTotal.
+  paymentStatus String    @default("Unpaid")
+  // Cash | Card | Cheque | Bank Transfer
+  paymentType   String    @default("Cash")
+  notes         String?   @db.Text
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  customer  Customer      @relation(fields: [customerId], references: [id])
+  warehouse Warehouse     @relation(fields: [warehouseId], references: [id])
+  items     SaleItem[]
+  payments  SalePayment[]
+
+  @@index([deletedAt])
+  @@index([customerId])
+  @@index([warehouseId])
+  @@index([status])
+  @@index([paymentStatus])
+}
+
+// One line of a Sale document.
+model SaleItem {
+  id            Int      @id @default(autoincrement())
+  saleId        Int
+  productId     Int
+  // Unit price for this specific sale (may differ from Product.price).
+  netUnitPrice  Decimal  @db.Decimal(12, 2)
+  quantity      Int
+  // Fixed | Percentage
+  discountType  String   @default("Fixed")
+  discount      Decimal  @default(0) @db.Decimal(12, 2)
+  // Inclusive | Exclusive
+  taxType       String   @default("Exclusive")
+  // Per-line tax rate as a percentage.
+  orderTax      Decimal  @default(0) @db.Decimal(5, 2)
+  // Server-computed: unitPrice×qty adjusted for discount and tax.
+  subtotal      Decimal  @db.Decimal(14, 2)
+  // Unit label for this sale line (may differ from product's default unit).
+  saleUnit      String
+  createdAt     DateTime @default(now())
+
+  sale    Sale    @relation(fields: [saleId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([saleId])
+  @@index([productId])
+}
+
+// Individual payment record against a sale.
+// The sum of all SalePayment rows for a sale determines Sale.paid/due/paymentStatus.
+model SalePayment {
+  id          Int      @id @default(autoincrement())
+  saleId      Int
+  amount      Decimal  @db.Decimal(12, 2)
+  // Cash | Card | Cheque | Bank Transfer
+  paymentType String   @default("Cash")
+  date        DateTime
+  notes       String?  @db.Text
+  createdAt   DateTime @default(now())
+
+  sale Sale @relation(fields: [saleId], references: [id])
+
+  @@index([saleId])
 }
