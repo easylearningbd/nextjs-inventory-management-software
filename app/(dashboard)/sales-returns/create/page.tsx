@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ShoppingCart } from 'lucide-react';
 import { auth } from '@/auth';
 import { db } from '@/lib/db';
 import SaleReturnForm from '../SaleReturnForm';
@@ -16,7 +16,35 @@ export default async function CreateSaleReturnPage({
 
   const sp        = await searchParams;
   const saleIdNum = parseInt(sp.saleId ?? '', 10);
-  if (!saleIdNum) redirect('/sales');
+
+  // No saleId — show a picker prompt instead of silently redirecting
+  if (!saleIdNum) {
+    return (
+      <>
+        <div className="page-head">
+          <h1 className="gg-page-title">Create Sale Return</h1>
+          <Link href="/sales-returns" className="gg-btn gg-btn--secondary gg-btn--sm">
+            <ArrowLeft size={16} /> Back
+          </Link>
+        </div>
+
+        <div className="gg-card gg-card-pad" style={{ textAlign: 'center', padding: 'var(--sp-12) var(--sp-6)' }}>
+          <ShoppingCart size={48} style={{ color: 'var(--gray-300)', marginBottom: 'var(--sp-4)' }} />
+          <h2 style={{ margin: '0 0 var(--sp-2)', fontSize: 18, fontWeight: 600, color: 'var(--ink)' }}>
+            Select a Sale First
+          </h2>
+          <p style={{ margin: '0 0 var(--sp-6)', color: 'var(--gray-500)', fontSize: 14, maxWidth: 380, marginInline: 'auto' }}>
+            A sale return must be linked to an existing sale. Go to the Sales list,
+            open the row menu for the sale you want to return, and choose
+            &ldquo;Create Sale Return&rdquo;.
+          </p>
+          <Link href="/sales" className="gg-btn gg-btn--primary">
+            <ShoppingCart size={16} /> Go to Sales
+          </Link>
+        </div>
+      </>
+    );
+  }
 
   const sale = await db.sale.findFirst({
     where: { id: saleIdNum, deletedAt: null },

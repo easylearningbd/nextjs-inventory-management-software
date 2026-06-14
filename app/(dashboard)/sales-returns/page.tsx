@@ -1,6 +1,7 @@
 import type { Prisma } from '@prisma/client';
+import Link from 'next/link';
 import {
-  Filter, CornerUpRight,
+  Plus, Filter, CornerUpRight,
   ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight,
 } from 'lucide-react';
 import { db } from '@/lib/db';
@@ -153,6 +154,9 @@ export default async function SaleReturnsPage({
           <Filter size={18} />
         </button>
         <SrDateFilter defaultDate={dateStr} />
+        <Link href="/sales-returns/create" className="gg-btn gg-btn--primary">
+          <Plus size={17} /> Create Sale Return
+        </Link>
       </div>
 
       <div className="gg-card gg-card-pad">
