@@ -312,13 +312,239 @@ export async function createSale(
 }
 
 // ── Update sale ───────────────────────────────────────────────────────────────
-// Implemented in Step 6.
 
 export async function updateSale(
   _prev: ActionResult,
-  _formData: FormData,
+  formData: FormData,
 ): Promise<ActionResult> {
-  return { error: 'Update not yet implemented — coming in Step 6.' };
+  // 1. Permission
+  const denied = await requirePermission();
+  if (denied) return { error: denied };
+
+  // 2. Parse header fields
+  const saleIdRaw  = formData.get('saleId')      as string;
+  const dateStr    = (formData.get('date')        as string)?.trim();
+  const custIdRaw  = formData.get('customerId')   as string;
+  const statusRaw  = (formData.get('status')      as string)?.trim();
+  const payTypeRaw = (formData.get('paymentType') as string)?.trim();
+  const notes      = (formData.get('notes')       as string)?.trim() || null;
+
+  const saleId     = parseInt(saleIdRaw, 10);
+  const customerId = parseInt(custIdRaw, 10);
+
+  if (isNaN(saleId) || saleId <= 0)                                  return { error: 'Invalid sale.' };
+  if (!dateStr)                                                        return { error: 'Date is required.' };
+  if (isNaN(customerId) || customerId <= 0)                           return { error: 'Customer is required.' };
+  if (!STATUSES.includes(statusRaw as typeof STATUSES[number]))      return { error: 'Invalid status.' };
+  if (!PAY_TYPES.includes(payTypeRaw as typeof PAY_TYPES[number]))   return { error: 'Invalid payment type.' };
+
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return { error: 'Invalid date.' };
+
+  const newStatus   = statusRaw  as typeof STATUSES[number];
+  const paymentType = payTypeRaw as typeof PAY_TYPES[number];
+
+  // 3. Order-level numbers
+  const orderTaxPct  = parseFloat(formData.get('orderTaxPct')  as string) || 0;
+  const flatDiscount = parseFloat(formData.get('flatDiscount') as string) || 0;
+  const shipping     = parseFloat(formData.get('shipping')     as string) || 0;
+
+  if (orderTaxPct  < 0 || orderTaxPct  > 100) return { error: 'Order tax must be 0–100%.' };
+  if (flatDiscount < 0)                        return { error: 'Discount cannot be negative.' };
+  if (shipping     < 0)                        return { error: 'Shipping cannot be negative.' };
+
+  // 4. Parse + validate line items
+  let rawItems: unknown;
+  try {
+    rawItems = JSON.parse((formData.get('items') as string) ?? '[]');
+  } catch {
+    return { error: 'Invalid items payload.' };
+  }
+
+  const itemsResult = z
+    .array(itemSchema)
+    .min(1, 'At least one item is required.')
+    .safeParse(rawItems);
+
+  if (!itemsResult.success) {
+    return { error: itemsResult.error.issues[0]?.message ?? 'Validation failed.' };
+  }
+  const newItems = itemsResult.data;
+
+  // 5. Re-read sale + customer + products server-side
+  const [sale, customer] = await Promise.all([
+    db.sale.findFirst({
+      where:  { id: saleId, deletedAt: null },
+      select: {
+        id:          true,
+        warehouseId: true,
+        status:      true,
+        items:       { select: { productId: true, quantity: true } },
+      },
+    }),
+    db.customer.findFirst({
+      where:  { id: customerId, deletedAt: null },
+      select: { id: true },
+    }),
+  ]);
+
+  if (!sale)     return { error: 'Sale not found.' };
+  if (!customer) return { error: 'Selected customer not found.' };
+
+  const { warehouseId, status: oldStatus, items: oldItems } = sale;
+
+  const uniqueNewProductIds = [...new Set(newItems.map((i) => i.productId))];
+  const activeProducts      = await db.product.findMany({
+    where:  { id: { in: uniqueNewProductIds }, deletedAt: null },
+    select: { id: true, name: true },
+  });
+  if (activeProducts.length !== uniqueNewProductIds.length) {
+    return { error: 'One or more selected products could not be found or have been deleted.' };
+  }
+  const productNameMap = new Map(activeProducts.map((p) => [p.id, p.name]));
+
+  // 6. Pre-validate stock using the net delta per product.
+  // Old qty restores stock; new qty consumes stock. Net delta = newQty - oldQty
+  // (counting only when that status moves stock).
+  const oldMap = new Map(oldItems.map((i) => [i.productId, i.quantity]));
+  const newMap = new Map(newItems.map((i) => [i.productId, i.quantity]));
+
+  const needsCheck: Array<{ productId: number; delta: number }> = [];
+
+  const allProductIds = new Set([...oldMap.keys(), ...newMap.keys()]);
+  for (const productId of allProductIds) {
+    const oldQty = oldStatus === 'Received' ? (oldMap.get(productId) ?? 0) : 0;
+    const newQty = newStatus === 'Received' ? (newMap.get(productId) ?? 0) : 0;
+    const delta  = newQty - oldQty;
+    if (delta > 0) needsCheck.push({ productId, delta });
+  }
+
+  if (needsCheck.length > 0) {
+    const stockRows = await db.productStock.findMany({
+      where:  { warehouseId, productId: { in: needsCheck.map((c) => c.productId) } },
+      select: { productId: true, quantity: true },
+    });
+    const stockMap = new Map(stockRows.map((s) => [s.productId, s.quantity]));
+
+    for (const { productId, delta } of needsCheck) {
+      const available = stockMap.get(productId) ?? 0;
+      if (delta > available) {
+        const name = productNameMap.get(productId) ?? `Product #${productId}`;
+        return {
+          error: `Insufficient stock for "${name}": ${available} in warehouse, ${delta} additional units needed.`,
+        };
+      }
+    }
+  }
+
+  // 7. Recompute totals server-side
+  const lineInputs = newItems.map((item) => ({
+    netUnitCost:  item.netUnitPrice,
+    quantity:     item.quantity,
+    discountType: item.discountType,
+    discount:     item.discount,
+    taxType:      item.taxType,
+    orderTax:     item.orderTax,
+  }));
+
+  const newGrandTotal = orderGrandTotal({ lines: lineInputs, orderTaxPct, flatDiscount, shipping });
+
+  // 8. Read existing paid from SalePayment records — form's paidAmount is ignored
+  // in edit mode because payments are managed through /sales/:id/payments.
+  const paymentAgg = await db.salePayment.aggregate({
+    where: { saleId },
+    _sum:  { amount: true },
+  });
+  const existingPaid  = Math.min(Number(paymentAgg._sum.amount ?? 0), newGrandTotal);
+  const newDue        = Math.max(0, newGrandTotal - existingPaid);
+  const paymentStatus = derivePaymentStatus(existingPaid, newGrandTotal);
+
+  // 9. Atomic transaction: stock reconciliation → replace items → update header
+  const allAffectedProductIds = new Set([
+    ...oldItems.map((i) => i.productId),
+    ...uniqueNewProductIds,
+  ]);
+
+  try {
+    await db.$transaction(async (tx) => {
+      // ── Stock reconciliation (difference method) ──────────────────────────
+      if (oldStatus === 'Received' && newStatus === 'Received') {
+        for (const productId of allProductIds) {
+          const oldQty = oldMap.get(productId) ?? 0;
+          const newQty = newMap.get(productId) ?? 0;
+          const delta  = newQty - oldQty;
+          if (delta > 0) {
+            await applyStockAdjustment(tx, productId, warehouseId, delta, 'Subtraction');
+          } else if (delta < 0) {
+            await applyStockAdjustment(tx, productId, warehouseId, -delta, 'Addition');
+          }
+        }
+      } else if (oldStatus === 'Received') {
+        // Transitioning away from Received: return all old stock
+        for (const item of oldItems) {
+          await applyStockAdjustment(tx, item.productId, warehouseId, item.quantity, 'Addition');
+        }
+      } else if (newStatus === 'Received') {
+        // Transitioning into Received: consume all new stock
+        for (const item of newItems) {
+          await applyStockAdjustment(tx, item.productId, warehouseId, item.quantity, 'Subtraction');
+        }
+      }
+
+      // ── Replace line items ────────────────────────────────────────────────
+      await tx.saleItem.deleteMany({ where: { saleId } });
+
+      for (let idx = 0; idx < newItems.length; idx++) {
+        const item = newItems[idx];
+        const sub  = lineSubtotal(lineInputs[idx]);
+        await tx.saleItem.create({
+          data: {
+            saleId,
+            productId:    item.productId,
+            netUnitPrice: item.netUnitPrice.toFixed(2),
+            quantity:     item.quantity,
+            discountType: item.discountType,
+            discount:     item.discount.toFixed(2),
+            taxType:      item.taxType,
+            orderTax:     item.orderTax.toFixed(2),
+            subtotal:     sub.toFixed(2),
+            saleUnit:     item.saleUnit,
+          },
+        });
+      }
+
+      // ── Update sale header ────────────────────────────────────────────────
+      await tx.sale.update({
+        where: { id: saleId },
+        data: {
+          customerId,
+          date,
+          status:        newStatus,
+          orderTax:      orderTaxPct.toFixed(2),
+          discount:      flatDiscount.toFixed(2),
+          shipping:      shipping.toFixed(2),
+          grandTotal:    newGrandTotal.toFixed(2),
+          paid:          existingPaid.toFixed(2),
+          due:           newDue.toFixed(2),
+          paymentStatus,
+          paymentType,
+          notes:         notes ?? undefined,
+        },
+      });
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Failed to update sale.';
+    return { error: msg };
+  }
+
+  revalidatePath('/sales');
+  revalidatePath(`/sales/${saleId}`);
+  revalidatePath('/products');
+  for (const id of allAffectedProductIds) {
+    revalidatePath(`/products/${id}`);
+  }
+
+  return { success: true, id: saleId };
 }
 
 // ── Add payment ───────────────────────────────────────────────────────────────
