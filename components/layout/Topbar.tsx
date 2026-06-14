@@ -26,7 +26,8 @@ const PAGE_META: Record<string, { title: string; icon: React.ReactNode }> = {
   '/purchases/returns/create':   { title: 'Create Purchase Return',   icon: <Receipt size={18} /> },
   '/sales':               { title: 'Sales',               icon: <ShoppingCart size={18} /> },
   '/sales/create':        { title: 'Create Sale',         icon: <ShoppingCart size={18} /> },
-  '/sales-returns':       { title: 'Sales Returns',       icon: <ShoppingCart size={18} /> },
+  '/sales-returns':        { title: 'Sales Returns',        icon: <ShoppingCart size={18} /> },
+  '/sales-returns/create': { title: 'Create Sale Return',  icon: <ShoppingCart size={18} /> },
   '/transfers':           { title: 'Transfers',           icon: <Repeat size={18} /> },
   '/expenses':            { title: 'Expenses',            icon: <Wallet size={18} /> },
   '/expense-categories':  { title: 'Expense Categories',  icon: <Wallet size={18} /> },
@@ -73,6 +74,9 @@ export default function Topbar({ onToggleSidebar, userName, userInitial }: Topba
     else if (/^\/sales\/\d+\/edit$/.test(pathname))               meta = { title: 'Edit Sale',             icon: <ShoppingCart size={18} /> };
     else if (/^\/sales\/\d+\/payments$/.test(pathname))           meta = { title: 'Sale Payments',         icon: <ShoppingCart size={18} /> };
     else if (/^\/sales\/\d+$/.test(pathname))                     meta = { title: 'View Sale',             icon: <ShoppingCart size={18} /> };
+    else if (/^\/sales-returns\/\d+\/pdf$/.test(pathname))         meta = { title: 'Sale Return PDF',       icon: <ShoppingCart size={18} /> };
+    else if (/^\/sales-returns\/\d+\/edit$/.test(pathname))        meta = { title: 'Edit Sale Return',      icon: <ShoppingCart size={18} /> };
+    else if (/^\/sales-returns\/\d+$/.test(pathname))              meta = { title: 'View Sale Return',      icon: <ShoppingCart size={18} /> };
     else if (/^\/purchases\/returns\/\d+\/pdf$/.test(pathname))   meta = { title: 'Purchase Return PDF',   icon: <Receipt size={18} /> };
     else if (/^\/purchases\/returns\/\d+\/edit$/.test(pathname))  meta = { title: 'Edit Purchase Return',  icon: <Receipt size={18} /> };
     else if (/^\/purchases\/returns\/\d+$/.test(pathname))        meta = { title: 'View Purchase Return',  icon: <Receipt size={18} /> };
