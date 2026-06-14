@@ -100,7 +100,7 @@ export default async function CreateSaleReturnPage({
     customerId:    sale.customerId,
     saleId:        sale.id,
     saleReference: sale.reference,
-    status:        'Pending',
+    status:        'Received',
     orderTaxPct:   Number(sale.orderTax),
     flatDiscount:  Number(sale.discount),
     shipping:      Number(sale.shipping),
