@@ -86,6 +86,8 @@ model Warehouse {
   purchaseReturns PurchaseReturn[]
   sales           Sale[]
   saleReturns     SaleReturn[]
+  transfersFrom   Transfer[]       @relation("TransferFrom")
+  transfersTo     Transfer[]       @relation("TransferTo")
 
   @@index([deletedAt])
 }
@@ -183,6 +185,7 @@ model Product {
   purchaseReturnItems PurchaseReturnItem[]
   saleItems           SaleItem[]
   saleReturnItems     SaleReturnItem[]
+  transferItems       TransferItem[]
 
   @@index([deletedAt])
   @@index([categoryId])
@@ -564,5 +567,71 @@ model SaleReturnItem {
   product    Product    @relation(fields: [productId], references: [id])
 
   @@index([returnId])
+  @@index([productId])
+}
+
+// ── Transfers ─────────────────────────────────────────────────────────────────
+// A Transfer moves stock between two warehouses atomically.
+// Stock rule (Completed only): Subtraction from fromWarehouse, Addition to
+// toWarehouse. Pending/Sent = in-transit, no stock move yet.
+// Deleting a Completed transfer reverses: Add to From, Subtract from To.
+model Transfer {
+  id              Int       @id @default(autoincrement())
+  // Human-readable reference, e.g. "TR_0001". Generated after insert so the
+  // autoincrement id is available; temporarily stored as TEMP_<ts>_<rand>.
+  reference       String    @unique
+  fromWarehouseId Int
+  toWarehouseId   Int
+  date            DateTime
+  // Pending | Sent | Completed
+  status          String    @default("Pending")
+  // Order-level tax as a percentage applied to the sum of line subtotals.
+  orderTax        Decimal   @default(0) @db.Decimal(5, 2)
+  // Order-level flat discount in base currency.
+  discount        Decimal   @default(0) @db.Decimal(12, 2)
+  // Flat shipping cost added to the total.
+  shipping        Decimal   @default(0) @db.Decimal(12, 2)
+  // Server-computed from line subtotals + order tax/discount/shipping.
+  grandTotal      Decimal   @db.Decimal(14, 2)
+  notes           String?   @db.Text
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  fromWarehouse Warehouse      @relation("TransferFrom", fields: [fromWarehouseId], references: [id])
+  toWarehouse   Warehouse      @relation("TransferTo",   fields: [toWarehouseId],   references: [id])
+  items         TransferItem[]
+
+  @@index([deletedAt])
+  @@index([fromWarehouseId])
+  @@index([toWarehouseId])
+  @@index([status])
+}
+
+// One line of a Transfer document.
+model TransferItem {
+  id           Int      @id @default(autoincrement())
+  transferId   Int
+  productId    Int
+  // Unit cost at the time of the transfer (snapshot from product cost).
+  netUnitCost  Decimal  @db.Decimal(12, 2)
+  quantity     Int
+  // Fixed | Percentage
+  discountType String   @default("Fixed")
+  discount     Decimal  @default(0) @db.Decimal(12, 2)
+  // Inclusive | Exclusive
+  taxType      String   @default("Exclusive")
+  // Per-line tax rate as a percentage.
+  orderTax     Decimal  @default(0) @db.Decimal(5, 2)
+  // Server-computed: unitCost×qty adjusted for discount and tax.
+  subtotal     Decimal  @db.Decimal(14, 2)
+  // Unit label carried forward from the product at time of transfer.
+  productUnit  String
+  createdAt    DateTime @default(now())
+
+  transfer Transfer @relation(fields: [transferId], references: [id])
+  product  Product  @relation(fields: [productId], references: [id])
+
+  @@index([transferId])
   @@index([productId])
 }

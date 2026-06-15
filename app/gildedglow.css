@@ -490,6 +490,27 @@ button { font-family: inherit; }
 .auth-error { display: flex; align-items: center; gap: var(--sp-2); background: var(--danger-bg); color: var(--danger-fg); border: 1px solid #f1c3bc; border-radius: var(--r-md); padding: 12px 16px; font-size: 14px; font-weight: 500; margin-bottom: var(--sp-6); }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* ================================================================ BULK-SELECT CHECKBOX */
+.gg-check {
+  width: 18px; height: 18px;
+  border: 1.5px solid var(--gray-300); border-radius: var(--r-xs);
+  background: #fff; cursor: pointer;
+  appearance: none; -webkit-appearance: none;
+  position: relative; flex: none;
+  transition: border-color .15s, background .15s;
+}
+.gg-check:checked { background: var(--gold-600); border-color: var(--gold-600); }
+.gg-check:checked::after {
+  content: ""; position: absolute; left: 5px; top: 2px;
+  width: 4px; height: 8px; border: solid #fff; border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.gg-check:indeterminate { background: var(--gold-600); border-color: var(--gold-600); }
+.gg-check:indeterminate::after {
+  content: ""; position: absolute; left: 3px; top: 7px;
+  width: 10px; height: 2px; background: #fff;
+}
+
 /* ══════════════════════════════════════ DATE FIELD (input + calendar icon) */
 .date-field { position: relative; }
 .date-field svg { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--gray-500); pointer-events: none; }
