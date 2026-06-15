@@ -84,6 +84,7 @@ export default function Topbar({ onToggleSidebar, userName, userInitial }: Topba
     else if (/^\/purchases\/\d+\/pdf$/.test(pathname))            meta = { title: 'Purchase PDF',          icon: <Receipt size={18} /> };
     else if (/^\/purchases\/\d+\/edit$/.test(pathname))           meta = { title: 'Edit Purchase',         icon: <Receipt size={18} /> };
     else if (/^\/purchases\/\d+$/.test(pathname))                 meta = { title: 'View Purchase',         icon: <Receipt size={18} /> };
+    else if (/^\/transfers\/\d+\/pdf$/.test(pathname))           meta = { title: 'Transfer PDF',          icon: <Repeat size={18} /> };
     else if (/^\/transfers\/\d+\/edit$/.test(pathname))          meta = { title: 'Edit Transfer',         icon: <Repeat size={18} /> };
     else if (/^\/transfers\/\d+$/.test(pathname))                meta = { title: 'View Transfer',         icon: <Repeat size={18} /> };
   }
