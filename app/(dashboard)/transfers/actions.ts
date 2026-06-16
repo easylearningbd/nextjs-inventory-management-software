@@ -2,7 +2,7 @@
 
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
-import { auth } from '@/auth';
+import { can } from '@/lib/can';
 import { db } from '@/lib/db';
 import { applyStockAdjustment } from '@/lib/stockService';
 import { lineSubtotal, orderGrandTotal } from '@/lib/pricing';
@@ -77,18 +77,6 @@ const itemSchema = z.object({
   transferUnit: z.string().min(1, 'Transfer unit is required.'),
 });
 
-// ── Permission guard ──────────────────────────────────────────────────────────
-
-const ALLOWED_ROLES = ['admin', 'manager'] as const;
-
-async function requirePermission(): Promise<string | null> {
-  const session = await auth();
-  if (!session?.user?.id) return 'Not authenticated.';
-  if (!ALLOWED_ROLES.includes(session.user.role as typeof ALLOWED_ROLES[number])) {
-    return 'You do not have permission to manage transfers.';
-  }
-  return null;
-}
 
 // ── Shared header-field parser ────────────────────────────────────────────────
 
@@ -136,7 +124,7 @@ export async function createTransfer(
   formData: FormData,
 ): Promise<ActionResult> {
   // 1. Permission
-  const denied = await requirePermission();
+  const denied = await can('Manage Transfers');
   if (denied) return { error: denied };
 
   // 2. Parse + validate header
@@ -267,7 +255,7 @@ export async function updateTransfer(
   formData: FormData,
 ): Promise<ActionResult> {
   // 1. Permission
-  const denied = await requirePermission();
+  const denied = await can('Manage Transfers');
   if (denied) return { error: denied };
 
   // 2. Parse transferId
@@ -429,7 +417,7 @@ export async function updateTransfer(
 // add back to From warehouse, subtract from To warehouse — all inside one transaction
 // so a negative-stock failure rolls back the soft-delete too.
 export async function deleteTransfer(id: number): Promise<ActionResult> {
-  const denied = await requirePermission();
+  const denied = await can('Manage Transfers');
   if (denied) return { error: denied };
 
   const transfer = await db.transfer.findFirst({

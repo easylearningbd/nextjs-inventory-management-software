@@ -2,7 +2,7 @@
 
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
-import { auth } from '@/auth';
+import { can } from '@/lib/can';
 import { db } from '@/lib/db';
 import { applyStockAdjustment } from '@/lib/stockService';
 
@@ -17,22 +17,12 @@ export type SearchProduct = {
 
 export type AdjustmentState = { error?: string; success?: boolean };
 
-const ALLOWED_ROLES = ['admin', 'manager'] as const;
-
-async function requirePermission(): Promise<string | null> {
-  const session = await auth();
-  if (!session?.user?.id) return 'Not authenticated.';
-  if (!ALLOWED_ROLES.includes(session.user.role as typeof ALLOWED_ROLES[number])) {
-    return 'You do not have permission to manage adjustments.';
-  }
-  return null;
-}
 
 // ── Delete (soft) ─────────────────────────────────────────────────────────────
 // Marks the adjustment as deleted.  Stock changes already applied are NOT
 // reversed — a counter-adjustment must be created manually if needed.
 export async function deleteAdjustment(id: number): Promise<AdjustmentState> {
-  const denied = await requirePermission();
+  const denied = await can('Manage Adjustments');
   if (denied) return { error: denied };
 
   const existing = await db.adjustment.findFirst({
@@ -101,7 +91,7 @@ export async function createAdjustment(
   _prev:    AdjustmentState,
   formData: FormData,
 ): Promise<AdjustmentState> {
-  const denied = await requirePermission();
+  const denied = await can('Manage Adjustments');
   if (denied) return { error: denied };
 
   // ── 1. Parse header fields ──────────────────────────────────────────────────

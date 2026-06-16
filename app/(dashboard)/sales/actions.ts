@@ -2,25 +2,13 @@
 
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
-import { auth } from '@/auth';
+import { can } from '@/lib/can';
 import { db } from '@/lib/db';
 import { applyStockAdjustment } from '@/lib/stockService';
 import { lineSubtotal, orderGrandTotal } from '@/lib/pricing';
 
 export type ActionResult = { error?: string; success?: boolean; id?: number };
 
-// ── Permission guard ──────────────────────────────────────────────────────────
-
-const ALLOWED_ROLES = ['admin', 'manager'] as const;
-
-async function requirePermission(): Promise<string | null> {
-  const session = await auth();
-  if (!session?.user?.id) return 'Not authenticated.';
-  if (!ALLOWED_ROLES.includes(session.user.role as typeof ALLOWED_ROLES[number])) {
-    return 'You do not have permission to manage sales.';
-  }
-  return null;
-}
 
 // ── Product search (warehouse-scoped) ─────────────────────────────────────────
 // Returns only products that have stock > 0 in the selected warehouse.
@@ -114,7 +102,7 @@ export async function createSale(
   formData: FormData,
 ): Promise<ActionResult> {
   // 1. Permission
-  const denied = await requirePermission();
+  const denied = await can('Manage Sale');
   if (denied) return { error: denied };
 
   // 2. Parse header fields
@@ -318,7 +306,7 @@ export async function updateSale(
   formData: FormData,
 ): Promise<ActionResult> {
   // 1. Permission
-  const denied = await requirePermission();
+  const denied = await can('Manage Sale');
   if (denied) return { error: denied };
 
   // 2. Parse header fields
@@ -554,7 +542,7 @@ export async function addSalePayment(
   formData: FormData,
 ): Promise<ActionResult> {
   // 1. Permission
-  const denied = await requirePermission();
+  const denied = await can('Manage Sale');
   if (denied) return { error: denied };
 
   // 2. Parse
@@ -627,7 +615,7 @@ export async function addSalePayment(
 // Pending/Ordered: soft-delete only (no stock was moved).
 
 export async function deleteSale(id: number): Promise<ActionResult> {
-  const denied = await requirePermission();
+  const denied = await can('Manage Sale');
   if (denied) return { error: denied };
 
   const sale = await db.sale.findFirst({

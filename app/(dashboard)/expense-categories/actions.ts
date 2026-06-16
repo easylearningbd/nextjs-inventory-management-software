@@ -2,21 +2,8 @@
 
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
-import { auth } from '@/auth';
+import { can } from '@/lib/can';
 import { db } from '@/lib/db';
-
-// ── Permission guard ──────────────────────────────────────────────────────────
-
-const ALLOWED_ROLES = ['admin', 'manager'] as const;
-
-async function requirePermission(): Promise<string | null> {
-  const session = await auth();
-  if (!session?.user?.id) return 'Not authenticated.';
-  if (!ALLOWED_ROLES.includes(session.user.role as typeof ALLOWED_ROLES[number])) {
-    return 'You do not have permission to manage expense categories.';
-  }
-  return null;
-}
 
 // ── Schema ────────────────────────────────────────────────────────────────────
 
@@ -34,7 +21,7 @@ export async function createExpenseCategory(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const denied = await requirePermission();
+  const denied = await can('Manage Expense Categories');
   if (denied) return { error: denied };
 
   const parsed = schema.safeParse({ name: (formData.get('name') as string)?.trim() });
@@ -55,7 +42,7 @@ export async function updateExpenseCategory(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const denied = await requirePermission();
+  const denied = await can('Manage Expense Categories');
   if (denied) return { error: denied };
 
   // Re-read server-side — never trust the client for which record to mutate
@@ -82,7 +69,7 @@ export async function updateExpenseCategory(
 // ── Delete (soft) ─────────────────────────────────────────────────────────────
 
 export async function deleteExpenseCategory(id: number): Promise<ActionState> {
-  const denied = await requirePermission();
+  const denied = await can('Manage Expense Categories');
   if (denied) return { error: denied };
 
   const existing = await db.expenseCategory.findFirst({

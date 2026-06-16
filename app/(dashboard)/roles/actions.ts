@@ -3,21 +3,10 @@
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { auth } from '@/auth';
+import { can } from '@/lib/can';
 import { db } from '@/lib/db';
 import { PERMISSIONS, PERMISSION_SET } from '@/lib/permissions';
 
-// ── Permission guard ──────────────────────────────────────────────────────────
-// Replaced in Step 3 with can('Manage Roles'); admin-only until then.
-
-async function requirePermission(): Promise<string | null> {
-  const session = await auth();
-  if (!session?.user?.id) return 'Not authenticated.';
-  if (session.user.role !== 'admin') {
-    return 'You do not have permission to manage roles.';
-  }
-  return null;
-}
 
 // ── Schema ────────────────────────────────────────────────────────────────────
 
@@ -38,7 +27,7 @@ export async function createRole(
   _prev: RoleState,
   formData: FormData,
 ): Promise<RoleState> {
-  const denied = await requirePermission();
+  const denied = await can('Manage Roles');
   if (denied) return { error: denied };
 
   const parsed = roleSchema.safeParse({
@@ -70,7 +59,7 @@ export async function updateRole(
   _prev: RoleState,
   formData: FormData,
 ): Promise<RoleState> {
-  const denied = await requirePermission();
+  const denied = await can('Manage Roles');
   if (denied) return { error: denied };
 
   const existing = await db.role.findFirst({
@@ -111,7 +100,7 @@ export async function updateRole(
 // ── Delete (soft) ─────────────────────────────────────────────────────────────
 
 export async function deleteRole(id: number): Promise<RoleState> {
-  const denied = await requirePermission();
+  const denied = await can('Manage Roles');
   if (denied) return { error: denied };
 
   const existing = await db.role.findFirst({

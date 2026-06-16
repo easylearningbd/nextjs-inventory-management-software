@@ -3,21 +3,8 @@
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { auth } from '@/auth';
+import { can } from '@/lib/can';
 import { db } from '@/lib/db';
-
-// ── Permission guard ──────────────────────────────────────────────────────────
-
-const ALLOWED_ROLES = ['admin', 'manager'] as const;
-
-async function requirePermission(): Promise<string | null> {
-  const session = await auth();
-  if (!session?.user?.id) return 'Not authenticated.';
-  if (!ALLOWED_ROLES.includes(session.user.role as typeof ALLOWED_ROLES[number])) {
-    return 'You do not have permission to manage expenses.';
-  }
-  return null;
-}
 
 // ── Schema ────────────────────────────────────────────────────────────────────
 
@@ -42,7 +29,7 @@ export async function createExpense(
   _prev: ExpenseState,
   formData: FormData,
 ): Promise<ExpenseState> {
-  const denied = await requirePermission();
+  const denied = await can('Manage Expenses');
   if (denied) return { error: denied };
 
   const raw = {
@@ -101,7 +88,7 @@ export async function updateExpense(
   _prev: ExpenseState,
   formData: FormData,
 ): Promise<ExpenseState> {
-  const denied = await requirePermission();
+  const denied = await can('Manage Expenses');
   if (denied) return { error: denied };
 
   const existing = await db.expense.findFirst({
@@ -153,7 +140,7 @@ export async function updateExpense(
 // ── Delete (soft) ─────────────────────────────────────────────────────────────
 
 export async function deleteExpense(id: number): Promise<ExpenseState> {
-  const denied = await requirePermission();
+  const denied = await can('Manage Expenses');
   if (denied) return { error: denied };
 
   const existing = await db.expense.findFirst({

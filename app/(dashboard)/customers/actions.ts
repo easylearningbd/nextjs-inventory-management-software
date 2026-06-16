@@ -2,20 +2,8 @@
 
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
-import { auth } from '@/auth';
+import { can } from '@/lib/can';
 import { db } from '@/lib/db';
-
-// ─── Permission helper ────────────────────────────────────────────────────────
-const CUSTOMER_ROLES = ['admin', 'manager'] as const;
-
-async function requireCustomerPermission() {
-  const session = await auth();
-  if (!session?.user?.id) return 'Not authenticated.' as const;
-  if (!CUSTOMER_ROLES.includes(session.user.role as typeof CUSTOMER_ROLES[number])) {
-    return 'You do not have permission to manage customers.' as const;
-  }
-  return null;
-}
 
 // ─── Shared schema ────────────────────────────────────────────────────────────
 const customerSchema = z.object({
@@ -44,7 +32,7 @@ export async function createCustomer(
   _prev: CustomerState,
   formData: FormData,
 ): Promise<CustomerState> {
-  const denied = await requireCustomerPermission();
+  const denied = await can('Manage Customers');
   if (denied) return { error: denied };
 
   const parsed = customerSchema.safeParse({
@@ -86,7 +74,7 @@ export async function updateCustomer(
   _prev: CustomerState,
   formData: FormData,
 ): Promise<CustomerState> {
-  const denied = await requireCustomerPermission();
+  const denied = await can('Manage Customers');
   if (denied) return { error: denied };
 
   // Re-fetch server-side — never trust the client for which record to mutate.
@@ -131,7 +119,7 @@ export async function updateCustomer(
 
 // ─── Delete (wired in Step 5) ─────────────────────────────────────────────────
 export async function deleteCustomer(id: number): Promise<CustomerState> {
-  const denied = await requireCustomerPermission();
+  const denied = await can('Manage Customers');
   if (denied) return { error: denied };
 
   const existing = await db.customer.findFirst({

@@ -694,6 +694,16 @@ button { font-family: inherit; }
 .pur-info-line:last-child { border-bottom: none; }
 .pur-info-line .k { color: var(--gray-500); font-weight: 600; min-width: 100px; flex-shrink: 0; }
 .pur-info-line .v { color: var(--ink); font-weight: 600; }
+/* ============================================================ ROLES / PERMISSIONS FORM */
+.perm-head { display: flex; align-items: center; gap: var(--sp-4); margin: var(--sp-7) 0 var(--sp-5); }
+.perm-head .lbl { font-family: var(--font-display); font-weight: 600; color: var(--ink); font-size: 15px; }
+.perm-all { display: inline-flex; align-items: center; gap: var(--sp-2); cursor: pointer; user-select: none; }
+.perm-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--sp-5) var(--sp-8); }
+@media (max-width: 860px) { .perm-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 540px) { .perm-grid { grid-template-columns: 1fr; } }
+.perm-item { display: flex; align-items: center; gap: var(--sp-3); cursor: pointer; color: var(--gray-700); font-size: 14px; user-select: none; }
+.perm-item:hover { color: var(--ink); }
+
 /* Print / PDF — hide navigation, pad content for paper */
 @media print {
   .gg-sidebar, .gg-topbar, .pur-noprint { display: none !important; }

@@ -2,23 +2,8 @@
 
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
-import { auth } from '@/auth';
+import { can } from '@/lib/can';
 import { db } from '@/lib/db';
-
-// ─── Permission helper ────────────────────────────────────────────────────────
-// Checks that the caller has the "Manage Warehouses" permission.
-// Currently implemented as a role check (admin | manager).
-// Replace with a granular permission lookup when the full RBAC system is built.
-const WAREHOUSE_ROLES = ['admin', 'manager'] as const;
-
-async function requireWarehousePermission() {
-  const session = await auth();
-  if (!session?.user?.id) return 'Not authenticated.' as const;
-  if (!WAREHOUSE_ROLES.includes(session.user.role as typeof WAREHOUSE_ROLES[number])) {
-    return 'You do not have permission to manage warehouses.' as const;
-  }
-  return null;
-}
 
 // ─── Shared schema ────────────────────────────────────────────────────────────
 const warehouseSchema = z.object({
@@ -41,7 +26,7 @@ export async function createWarehouse(
   _prev: WarehouseState,
   formData: FormData,
 ): Promise<WarehouseState> {
-  const denied = await requireWarehousePermission();
+  const denied = await can('Manage Warehouses');
   if (denied) return { error: denied };
 
   const parsed = warehouseSchema.safeParse({
@@ -80,7 +65,7 @@ export async function updateWarehouse(
   _prev: WarehouseState,
   formData: FormData,
 ): Promise<WarehouseState> {
-  const denied = await requireWarehousePermission();
+  const denied = await can('Manage Warehouses');
   if (denied) return { error: denied };
 
   // Re-read the warehouse from the DB so the id comes from the server,
@@ -123,7 +108,7 @@ export async function updateWarehouse(
 
 // ─── Delete ───────────────────────────────────────────────────────────────────
 export async function deleteWarehouse(id: number): Promise<WarehouseState> {
-  const denied = await requireWarehousePermission();
+  const denied = await can('Manage Warehouses');
   if (denied) return { error: denied };
 
   const existing = await db.warehouse.findFirst({

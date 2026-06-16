@@ -2,22 +2,8 @@
 
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
-import { auth } from '@/auth';
+import { can } from '@/lib/can';
 import { db } from '@/lib/db';
-
-// ─── Permission helper ────────────────────────────────────────────────────────
-// Checks "Manage Suppliers" permission — currently a role check.
-// Replace with a granular RBAC lookup when that system is built.
-const SUPPLIER_ROLES = ['admin', 'manager'] as const;
-
-async function requireSupplierPermission() {
-  const session = await auth();
-  if (!session?.user?.id) return 'Not authenticated.' as const;
-  if (!SUPPLIER_ROLES.includes(session.user.role as typeof SUPPLIER_ROLES[number])) {
-    return 'You do not have permission to manage suppliers.' as const;
-  }
-  return null;
-}
 
 // ─── Shared schema ────────────────────────────────────────────────────────────
 const supplierSchema = z.object({
@@ -40,7 +26,7 @@ export async function createSupplier(
   _prev: SupplierState,
   formData: FormData,
 ): Promise<SupplierState> {
-  const denied = await requireSupplierPermission();
+  const denied = await can('Manage Suppliers');
   if (denied) return { error: denied };
 
   const parsed = supplierSchema.safeParse({
@@ -79,7 +65,7 @@ export async function updateSupplier(
   _prev: SupplierState,
   formData: FormData,
 ): Promise<SupplierState> {
-  const denied = await requireSupplierPermission();
+  const denied = await can('Manage Suppliers');
   if (denied) return { error: denied };
 
   // Re-fetch by id server-side — never trust the client for which record to mutate.
@@ -121,7 +107,7 @@ export async function updateSupplier(
 
 // ─── Delete (wired in Step 4) ─────────────────────────────────────────────────
 export async function deleteSupplier(id: number): Promise<SupplierState> {
-  const denied = await requireSupplierPermission();
+  const denied = await can('Manage Suppliers');
   if (denied) return { error: denied };
 
   const existing = await db.supplier.findFirst({

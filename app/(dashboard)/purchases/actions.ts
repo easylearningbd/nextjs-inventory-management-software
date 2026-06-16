@@ -2,25 +2,13 @@
 
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
-import { auth } from '@/auth';
+import { can } from '@/lib/can';
 import { db } from '@/lib/db';
 import { applyStockAdjustment } from '@/lib/stockService';
 import { lineSubtotal, orderGrandTotal } from '@/lib/pricing';
 
 export type ActionResult = { error?: string; success?: boolean };
 
-// ── Permission guard ──────────────────────────────────────────────────────────
-
-const ALLOWED_ROLES = ['admin', 'manager'] as const;
-
-async function requirePermission(): Promise<string | null> {
-  const session = await auth();
-  if (!session?.user?.id) return 'Not authenticated.';
-  if (!ALLOWED_ROLES.includes(session.user.role as typeof ALLOWED_ROLES[number])) {
-    return 'You do not have permission to manage purchases.';
-  }
-  return null;
-}
 
 // ── Product search ────────────────────────────────────────────────────────────
 // Returns all active products matching the query — NOT filtered by warehouse
@@ -98,7 +86,7 @@ export async function createPurchase(
   formData: FormData,
 ): Promise<ActionResult> {
   // 1. Permission check
-  const denied = await requirePermission();
+  const denied = await can('Manage Purchase');
   if (denied) return { error: denied };
 
   // 2. Parse header fields
@@ -252,7 +240,7 @@ export async function updatePurchase(
   formData: FormData,
 ): Promise<ActionResult> {
   // 1. Permission check
-  const denied = await requirePermission();
+  const denied = await can('Manage Purchase');
   if (denied) return { error: denied };
 
   // 2. Parse purchaseId
@@ -446,7 +434,7 @@ export async function updatePurchase(
 // error is returned instead.
 
 export async function deletePurchase(id: number): Promise<ActionResult> {
-  const denied = await requirePermission();
+  const denied = await can('Manage Purchase');
   if (denied) return { error: denied };
 
   const purchase = await db.purchase.findFirst({

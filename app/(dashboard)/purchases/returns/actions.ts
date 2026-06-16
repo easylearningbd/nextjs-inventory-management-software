@@ -2,7 +2,7 @@
 
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
-import { auth } from '@/auth';
+import { can } from '@/lib/can';
 import { db } from '@/lib/db';
 import { applyStockAdjustment } from '@/lib/stockService';
 import { lineSubtotal, orderGrandTotal } from '@/lib/pricing';
@@ -87,20 +87,6 @@ const itemSchema = z.object({
   returnUnit:   z.string().min(1, 'Return unit is required.'),
 });
 
-// ── Permission guard ──────────────────────────────────────────────────────────
-
-const ALLOWED_ROLES = ['admin', 'manager'] as const;
-
-async function requirePermission(): Promise<string | null> {
-  const session = await auth();
-  if (!session?.user?.id) return 'Not authenticated.';
-  if (!ALLOWED_ROLES.includes(session.user.role as typeof ALLOWED_ROLES[number])) {
-    return 'You do not have permission to manage purchase returns.';
-  }
-  return null;
-}
-
-export { requirePermission };
 
 // ── Delete purchase return ────────────────────────────────────────────────────
 // Pending / Ordered: soft-delete immediately (no stock was moved).
@@ -109,7 +95,7 @@ export { requirePermission };
 // (This is the opposite of deleting a purchase, which subtracts stock.)
 
 export async function deletePurchaseReturn(id: number): Promise<ActionResult> {
-  const denied = await requirePermission();
+  const denied = await can('Manage Purchase Return');
   if (denied) return { error: denied };
 
   const pr = await db.purchaseReturn.findFirst({
@@ -158,7 +144,7 @@ export async function createPurchaseReturn(
   formData: FormData,
 ): Promise<ActionResult> {
   // 1. Permission check
-  const denied = await requirePermission();
+  const denied = await can('Manage Purchase Return');
   if (denied) return { error: denied };
 
   // 2. Parse header fields
@@ -320,7 +306,7 @@ export async function updatePurchaseReturn(
   formData: FormData,
 ): Promise<ActionResult> {
   // 1. Permission check
-  const denied = await requirePermission();
+  const denied = await can('Manage Purchase Return');
   if (denied) return { error: denied };
 
   // 2. Parse return ID

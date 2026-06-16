@@ -6,18 +6,9 @@ import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { revalidatePath } from 'next/cache';
 import { auth } from '@/auth';
+import { can } from '@/lib/can';
 import { db } from '@/lib/db';
 
-// ─── Permission helper ────────────────────────────────────────────────────────
-// Managing user accounts is admin-only — more sensitive than other modules.
-async function requireUserPermission() {
-  const session = await auth();
-  if (!session?.user?.id) return 'Not authenticated.' as const;
-  if (session.user.role !== 'admin') {
-    return 'Only admins can manage user accounts.' as const;
-  }
-  return null;
-}
 
 // ─── Shared image-upload helper ───────────────────────────────────────────────
 async function saveAvatar(file: File, userId: number | string): Promise<string | undefined> {
@@ -79,7 +70,7 @@ export async function createUser(
   _prev: UserFormState,
   formData: FormData,
 ): Promise<UserFormState> {
-  const denied = await requireUserPermission();
+  const denied = await can('Manage Users');
   if (denied) return { error: denied };
 
   const parsed = createUserSchema.safeParse({
@@ -130,7 +121,7 @@ export async function updateUser(
   _prev: UserFormState,
   formData: FormData,
 ): Promise<UserFormState> {
-  const denied = await requireUserPermission();
+  const denied = await can('Manage Users');
   if (denied) return { error: denied };
 
   // Re-fetch server-side — never trust client for which record to mutate.
@@ -191,7 +182,7 @@ export async function updateUser(
 
 // ─── Delete (wired in Step 4) ─────────────────────────────────────────────────
 export async function deleteUser(id: number): Promise<UserFormState> {
-  const denied = await requireUserPermission();
+  const denied = await can('Manage Users');
   if (denied) return { error: denied };
 
   const session = await auth();

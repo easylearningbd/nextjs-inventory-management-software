@@ -4,20 +4,8 @@ import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
-import { auth } from '@/auth';
+import { can } from '@/lib/can';
 import { db } from '@/lib/db';
-
-// ─── Permission helper ────────────────────────────────────────────────────────
-const CATEGORY_ROLES = ['admin', 'manager'] as const;
-
-async function requireCategoryPermission() {
-  const session = await auth();
-  if (!session?.user?.id) return 'Not authenticated.' as const;
-  if (!CATEGORY_ROLES.includes(session.user.role as typeof CATEGORY_ROLES[number])) {
-    return 'You do not have permission to manage product categories.' as const;
-  }
-  return null;
-}
 
 // ─── Logo upload helper ───────────────────────────────────────────────────────
 async function saveLogo(file: File, id: number | string): Promise<string | undefined> {
@@ -46,7 +34,7 @@ export async function createCategory(
   _prev: CategoryState,
   formData: FormData,
 ): Promise<CategoryState> {
-  const denied = await requireCategoryPermission();
+  const denied = await can('Manage Product Categories');
   if (denied) return { error: denied };
 
   const parsed = categorySchema.safeParse({ name: formData.get('name') });
@@ -73,7 +61,7 @@ export async function updateCategory(
   _prev: CategoryState,
   formData: FormData,
 ): Promise<CategoryState> {
-  const denied = await requireCategoryPermission();
+  const denied = await can('Manage Product Categories');
   if (denied) return { error: denied };
 
   // Re-read server-side — never trust the client for which record to mutate.
@@ -106,7 +94,7 @@ export async function updateCategory(
 
 // ─── Delete (wired in Step 4) ─────────────────────────────────────────────────
 export async function deleteCategory(id: number): Promise<CategoryState> {
-  const denied = await requireCategoryPermission();
+  const denied = await can('Manage Product Categories');
   if (denied) return { error: denied };
 
   const existing = await db.category.findFirst({

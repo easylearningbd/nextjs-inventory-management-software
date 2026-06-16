@@ -4,7 +4,7 @@ import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
-import { auth } from '@/auth';
+import { can } from '@/lib/can';
 import { db } from '@/lib/db';
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
@@ -14,17 +14,6 @@ function parseImages(raw: string | null | undefined): string[] {
   catch { return []; }
 }
 
-// ─── Permission helper ────────────────────────────────────────────────────────
-const PRODUCT_ROLES = ['admin', 'manager'] as const;
-
-async function requireProductPermission() {
-  const session = await auth();
-  if (!session?.user?.id) return 'Not authenticated.' as const;
-  if (!PRODUCT_ROLES.includes(session.user.role as typeof PRODUCT_ROLES[number])) {
-    return 'You do not have permission to manage products.' as const;
-  }
-  return null;
-}
 
 // ─── Image upload helper ──────────────────────────────────────────────────────
 async function saveProductImages(files: File[], productId: number): Promise<string[]> {
@@ -110,7 +99,7 @@ export async function createProduct(
   _prev: ProductFormState,
   formData: FormData,
 ): Promise<ProductFormState> {
-  const denied = await requireProductPermission();
+  const denied = await can('Manage Products');
   if (denied) return { error: denied };
 
   const parsed = createProductSchema.safeParse({
@@ -198,7 +187,7 @@ export async function updateProduct(
   _prev: ProductFormState,
   formData: FormData,
 ): Promise<ProductFormState> {
-  const denied = await requireProductPermission();
+  const denied = await can('Manage Products');
   if (denied) return { error: denied };
 
   // Re-read server-side — never trust the client for which record to mutate.
@@ -281,7 +270,7 @@ export async function updateProduct(
 
 // ─── Delete ─── (completed in Step 6) ────────────────────────────────────────
 export async function deleteProduct(id: number): Promise<ProductFormState> {
-  const denied = await requireProductPermission();
+  const denied = await can('Manage Products');
   if (denied) return { error: denied };
 
   const existing = await db.product.findFirst({

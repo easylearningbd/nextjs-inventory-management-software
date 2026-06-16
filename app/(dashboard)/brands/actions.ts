@@ -4,20 +4,8 @@ import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
-import { auth } from '@/auth';
+import { can } from '@/lib/can';
 import { db } from '@/lib/db';
-
-// ─── Permission helper ────────────────────────────────────────────────────────
-const BRAND_ROLES = ['admin', 'manager'] as const;
-
-async function requireBrandPermission() {
-  const session = await auth();
-  if (!session?.user?.id) return 'Not authenticated.' as const;
-  if (!BRAND_ROLES.includes(session.user.role as typeof BRAND_ROLES[number])) {
-    return 'You do not have permission to manage brands.' as const;
-  }
-  return null;
-}
 
 // ─── Logo upload helper ───────────────────────────────────────────────────────
 async function saveLogo(file: File, id: number | string): Promise<string | undefined> {
@@ -46,7 +34,7 @@ export async function createBrand(
   _prev: BrandState,
   formData: FormData,
 ): Promise<BrandState> {
-  const denied = await requireBrandPermission();
+  const denied = await can('Manage Brands');
   if (denied) return { error: denied };
 
   const parsed = brandSchema.safeParse({ name: formData.get('name') });
@@ -73,7 +61,7 @@ export async function updateBrand(
   _prev: BrandState,
   formData: FormData,
 ): Promise<BrandState> {
-  const denied = await requireBrandPermission();
+  const denied = await can('Manage Brands');
   if (denied) return { error: denied };
 
   // Re-read server-side — never trust the client for which record to mutate.
@@ -106,7 +94,7 @@ export async function updateBrand(
 
 // ─── Delete (wired in Step 4) ─────────────────────────────────────────────────
 export async function deleteBrand(id: number): Promise<BrandState> {
-  const denied = await requireBrandPermission();
+  const denied = await can('Manage Brands');
   if (denied) return { error: denied };
 
   const existing = await db.brand.findFirst({
