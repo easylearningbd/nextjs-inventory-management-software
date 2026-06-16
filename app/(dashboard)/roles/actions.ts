@@ -1,25 +1,12 @@
 'use server';
 
-import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { can } from '@/lib/can';
 import { db } from '@/lib/db';
-import { PERMISSION_SET } from '@/lib/permissions';
+import { roleSchema, type RoleState } from './schema';
 
-
-// ── Schema ────────────────────────────────────────────────────────────────────
-
-export const roleSchema = z.object({
-  name: z.string().min(1, 'Name is required.').max(100, 'Name is too long.'),
-  permissions: z
-    .array(z.string())
-    .refine((arr) => arr.every((p) => PERMISSION_SET.has(p)), {
-      message: 'One or more permissions are invalid.',
-    }),
-});
-
-export type RoleState = { error?: string; success?: boolean };
+export type { RoleState };
 
 // ── Create ────────────────────────────────────────────────────────────────────
 
