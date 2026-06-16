@@ -4,118 +4,120 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  LayoutDashboard,
-  Boxes,
-  SlidersHorizontal,
-  FileText,
-  Receipt,
-  ShoppingCart,
-  Repeat,
-  Wallet,
-  Users,
-  ShieldCheck,
-  Warehouse,
-  BarChart3,
-  DollarSign,
-  Languages,
-  LayoutTemplate,
-  Settings,
-  ChevronRight,
-  Search,
-  Truck,
-  User,
+  LayoutDashboard, Boxes, SlidersHorizontal, FileText,
+  Receipt, ShoppingCart, Repeat, Wallet, Users, ShieldCheck,
+  Warehouse, BarChart3, DollarSign, Languages, LayoutTemplate,
+  Settings, ChevronRight, Search, Truck, User,
 } from 'lucide-react';
 
+type NavChild = {
+  label:       string;
+  href:        string;
+  icon?:       React.ReactNode;
+  permission?: string;
+};
+
 type NavItem = {
-  label: string;
-  href?: string;
-  icon?: React.ReactNode;
-  children?: { label: string; href: string; icon?: React.ReactNode }[];
+  label:       string;
+  href?:       string;
+  icon?:       React.ReactNode;
+  permission?: string;
+  children?:   NavChild[];
 };
 
 const NAV: NavItem[] = [
-  { label: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard /> },
+  { label: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard />, permission: 'Manage Dashboard' },
   {
     label: 'Products',
     icon: <Boxes />,
     children: [
-      { label: 'Products', href: '/products' },
-      { label: 'Product Categories', href: '/product-categories' },
-      { label: 'Brands', href: '/brands' },
-      { label: 'Units', href: '/units' },
-      { label: 'Base Units', href: '/base-units' },
-      { label: 'Print Barcode', href: '/print-barcode' },
+      { label: 'Products',           href: '/products',           permission: 'Manage Products' },
+      { label: 'Product Categories', href: '/product-categories', permission: 'Manage Product Categories' },
+      { label: 'Brands',             href: '/brands',             permission: 'Manage Brands' },
+      { label: 'Units',              href: '/units',              permission: 'Manage Units' },
+      { label: 'Base Units',         href: '/base-units',         permission: 'Manage Units' },
+      { label: 'Print Barcode',      href: '/print-barcode',      permission: 'Manage Products' },
     ],
   },
-  { label: 'Adjustments', href: '/adjustments', icon: <SlidersHorizontal /> },
-  { label: 'Quotations', href: '/quotations', icon: <FileText /> },
+  { label: 'Adjustments', href: '/adjustments', icon: <SlidersHorizontal />, permission: 'Manage Adjustments' },
+  { label: 'Quotations',  href: '/quotations',  icon: <FileText />,          permission: 'Manage Quotations'  },
   {
     label: 'Purchases',
     icon: <Receipt />,
     children: [
-      { label: 'Purchases', href: '/purchases' },
-      { label: 'Purchases Returns', href: '/purchases/returns' },
+      { label: 'Purchases',         href: '/purchases',         permission: 'Manage Purchase'        },
+      { label: 'Purchases Returns', href: '/purchases/returns', permission: 'Manage Purchase Return' },
     ],
   },
   {
     label: 'Sales',
     icon: <ShoppingCart />,
     children: [
-      { label: 'Sales', href: '/sales' },
-      { label: 'Sales Returns', href: '/sales-returns' },
+      { label: 'Sales',         href: '/sales',         permission: 'Manage Sale'        },
+      { label: 'Sales Returns', href: '/sales-returns', permission: 'Manage Sale Return' },
     ],
   },
-  { label: 'Transfers', href: '/transfers', icon: <Repeat /> },
+  { label: 'Transfers', href: '/transfers', icon: <Repeat />, permission: 'Manage Transfers' },
   {
     label: 'Expenses',
     icon: <Wallet />,
     children: [
-      { label: 'Expenses', href: '/expenses' },
-      { label: 'Expense Categories', href: '/expense-categories' },
+      { label: 'Expenses',           href: '/expenses',           permission: 'Manage Expenses'           },
+      { label: 'Expense Categories', href: '/expense-categories', permission: 'Manage Expense Categories' },
     ],
   },
   {
     label: 'Peoples',
     icon: <Users />,
     children: [
-      { label: 'Suppliers', href: '/suppliers', icon: <Truck /> },
-      { label: 'Customers', href: '/customers', icon: <Users /> },
-      { label: 'Users', href: '/users', icon: <User /> },
+      { label: 'Suppliers', href: '/suppliers', icon: <Truck />, permission: 'Manage Suppliers' },
+      { label: 'Customers', href: '/customers', icon: <Users />, permission: 'Manage Customers' },
+      { label: 'Users',     href: '/users',     icon: <User />,  permission: 'Manage Users'     },
     ],
   },
-  { label: 'Roles/Permissions', href: '/roles', icon: <ShieldCheck /> },
-  { label: 'Warehouse', href: '/warehouse', icon: <Warehouse /> },
-  { label: 'Reports', href: '/reports', icon: <BarChart3 /> },
-  { label: 'Currencies', href: '/currencies', icon: <DollarSign /> },
-  { label: 'Languages', href: '/languages', icon: <Languages /> },
+  { label: 'Roles/Permissions', href: '/roles',      icon: <ShieldCheck />, permission: 'Manage Roles'      },
+  { label: 'Warehouse',         href: '/warehouse',  icon: <Warehouse />,   permission: 'Manage Warehouses' },
+  { label: 'Reports',           href: '/reports',    icon: <BarChart3 />,   permission: 'Manage Reports'    },
+  { label: 'Currencies',        href: '/currencies', icon: <DollarSign />,  permission: 'Manage Currency'   },
+  { label: 'Languages',         href: '/languages',  icon: <Languages />,   permission: 'Manage Language'   },
   {
     label: 'Templates',
     icon: <LayoutTemplate />,
     children: [
-      { label: 'SMS Templates', href: '/templates/sms' },
-      { label: 'Email Templates', href: '/templates/email' },
+      { label: 'SMS Templates',   href: '/templates/sms',   permission: 'Manage Sms Templates'   },
+      { label: 'Email Templates', href: '/templates/email', permission: 'Manage Email Templates' },
     ],
   },
-  { label: 'Settings', href: '/settings', icon: <Settings /> },
+  { label: 'Settings', href: '/settings', icon: <Settings />, permission: 'Manage Setting' },
 ];
 
 type SidebarProps = {
-  collapsed: boolean;
+  collapsed:       boolean;
+  userPermissions: string[];
 };
 
 function NavGroup({
   item,
   collapsed,
   pathname,
+  userPermissions,
 }: {
-  item: NavItem;
-  collapsed: boolean;
-  pathname: string;
+  item:            NavItem;
+  collapsed:       boolean;
+  pathname:        string;
+  userPermissions: string[];
 }) {
-  const isChildActive = item.children?.some((c) => pathname.startsWith(c.href ?? '')) ?? false;
+  const allowed = (perm?: string) => !perm || userPermissions.includes(perm);
+
+  // Pre-filter children so the group open-state reflects only visible items.
+  const visibleChildren = item.children?.filter((c) => allowed(c.permission));
+
+  const isChildActive = visibleChildren?.some((c) => pathname.startsWith(c.href)) ?? false;
   const [open, setOpen] = useState(isChildActive);
 
+  // Leaf item
   if (!item.children) {
+    if (!allowed(item.permission)) return null;
     const active = pathname === item.href;
     return (
       <Link
@@ -128,6 +130,9 @@ function NavGroup({
       </Link>
     );
   }
+
+  // Group: hide entirely if no children pass the permission filter.
+  if (!visibleChildren || visibleChildren.length === 0) return null;
 
   return (
     <div className={`gg-nav-group${open ? ' is-open' : ''}`}>
@@ -142,7 +147,7 @@ function NavGroup({
         <ChevronRight className="gg-nav-chev" />
       </div>
       <div className="gg-nav-sub">
-        {item.children.map((child) => {
+        {visibleChildren.map((child) => {
           const active = pathname === child.href;
           return (
             <Link
@@ -160,7 +165,7 @@ function NavGroup({
   );
 }
 
-export default function Sidebar({ collapsed }: SidebarProps) {
+export default function Sidebar({ collapsed, userPermissions }: SidebarProps) {
   const pathname = usePathname();
 
   return (
@@ -182,6 +187,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
             item={item}
             collapsed={collapsed}
             pathname={pathname}
+            userPermissions={userPermissions}
           />
         ))}
       </nav>

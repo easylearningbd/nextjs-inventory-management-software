@@ -13,14 +13,16 @@ type UserData = {
   email:       string;
   phoneNumber: string | null;
   image:       string | null;
-  role:        string;
+  roleId:      number | null;
 };
+
+type RoleOption = { id: number; name: string };
 
 type UserAction = (prev: UserFormState, formData: FormData) => Promise<UserFormState>;
 
 type Props = {
   action:  UserAction;
-  roles:   string[];   // fetched from Role table by parent server component
+  roles:   RoleOption[];
   user?:   UserData;
   mode:    'create' | 'edit';
 };
@@ -187,12 +189,13 @@ export default function UserForm({ action, roles, user, mode }: Props) {
             <label className="gg-label" htmlFor="usr-role">
               Role <span className="gg-req">*</span>
             </label>
-            <select id="usr-role" name="role" className="gg-select"
-              defaultValue={v?.role ?? ''} required disabled={isPending}>
+            <select id="usr-role" name="roleId" className="gg-select"
+              defaultValue={v?.roleId != null ? String(v.roleId) : ''}
+              required disabled={isPending}>
               <option value="" disabled>Choose Role</option>
               {roles.map((r) => (
-                <option key={r} value={r}>
-                  {r.charAt(0).toUpperCase() + r.slice(1)}
+                <option key={r.id} value={String(r.id)}>
+                  {r.name.charAt(0).toUpperCase() + r.name.slice(1)}
                 </option>
               ))}
             </select>

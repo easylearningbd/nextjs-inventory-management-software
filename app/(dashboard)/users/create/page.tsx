@@ -9,14 +9,15 @@ export default async function CreateUserPage() {
   if (!session) redirect('/');
 
   const roles = await db.role.findMany({
+    where:   { deletedAt: null },
     orderBy: { name: 'asc' },
-    select:  { name: true },
+    select:  { id: true, name: true },
   });
 
   return (
     <UserForm
       action={createUser}
-      roles={roles.map((r) => r.name)}
+      roles={roles}
       mode="create"
     />
   );

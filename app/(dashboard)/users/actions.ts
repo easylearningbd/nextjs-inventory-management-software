@@ -33,7 +33,7 @@ const baseFields = {
   lastName:    z.string().min(1, 'Last name is required.'),
   email:       z.string().email('Invalid email address.'),
   phoneNumber: z.string().optional(),
-  role:        z.string().min(1, 'Role is required.'),
+  roleId:      z.coerce.number().int().positive('Role is required.'),
 };
 
 const createUserSchema = z
@@ -80,18 +80,18 @@ export async function createUser(
     phoneNumber:     formData.get('phoneNumber') || undefined,
     password:        formData.get('password'),
     confirmPassword: formData.get('confirmPassword'),
-    role:            formData.get('role'),
+    roleId:          formData.get('roleId'),
   });
 
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? 'Validation failed.' };
   }
 
-  const { firstName, lastName, email, phoneNumber, password, role } = parsed.data;
+  const { firstName, lastName, email, phoneNumber, password, roleId } = parsed.data;
 
-  // Validate role exists in the Role table.
-  const roleExists = await db.role.findUnique({ where: { name: role } });
-  if (!roleExists) return { error: 'Invalid role selected.' };
+  // Re-read role server-side — never trust client-submitted id.
+  const roleRecord = await db.role.findFirst({ where: { id: roleId, deletedAt: null } });
+  if (!roleRecord) return { error: 'Invalid role selected.' };
 
   // Email uniqueness check (excluding soft-deleted accounts).
   const conflict = await db.user.findFirst({ where: { email, deletedAt: null } });
@@ -101,7 +101,13 @@ export async function createUser(
   const hashed = await bcrypt.hash(password, 12);
 
   const newUser = await db.user.create({
-    data: { firstName, lastName, email, phoneNumber: phoneNumber ?? null, password: hashed, role },
+    data: {
+      firstName, lastName, email,
+      phoneNumber: phoneNumber ?? null,
+      password:    hashed,
+      role:        roleRecord.name,
+      roleId:      roleRecord.id,
+    },
   });
 
   // Handle optional avatar upload after we have the user id.
@@ -135,17 +141,18 @@ export async function updateUser(
     phoneNumber:     formData.get('phoneNumber') || undefined,
     password:        formData.get('password') || undefined,
     confirmPassword: formData.get('confirmPassword') || undefined,
-    role:            formData.get('role'),
+    roleId:          formData.get('roleId'),
   });
 
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? 'Validation failed.' };
   }
 
-  const { firstName, lastName, email, phoneNumber, password, role } = parsed.data;
+  const { firstName, lastName, email, phoneNumber, password, roleId } = parsed.data;
 
-  const roleExists = await db.role.findUnique({ where: { name: role } });
-  if (!roleExists) return { error: 'Invalid role selected.' };
+  // Re-read role server-side — never trust client-submitted id.
+  const roleRecord = await db.role.findFirst({ where: { id: roleId, deletedAt: null } });
+  if (!roleRecord) return { error: 'Invalid role selected.' };
 
   // Email uniqueness — allow the same email for this user, block if taken by another.
   const conflict = await db.user.findFirst({
@@ -162,7 +169,6 @@ export async function updateUser(
   const imageFile = formData.get('image') as File | null;
   const imagePath = imageFile ? await saveAvatar(imageFile, id) : undefined;
 
-  // role is intentionally included here — admins can change any user's role.
   await db.user.update({
     where: { id },
     data: {
@@ -171,7 +177,8 @@ export async function updateUser(
       email,
       phoneNumber:  phoneNumber ?? null,
       password:     hashedPassword,
-      role,
+      role:         roleRecord.name,
+      roleId:       roleRecord.id,
       ...(imagePath ? { image: imagePath } : {}),
     },
   });

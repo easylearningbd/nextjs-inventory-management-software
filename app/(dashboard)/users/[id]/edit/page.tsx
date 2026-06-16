@@ -28,11 +28,15 @@ export default async function EditUserPage({
         email:       true,
         phoneNumber: true,
         image:       true,
-        role:        true,
+        roleId:      true,
         // password: intentionally omitted
       },
     }),
-    db.role.findMany({ orderBy: { name: 'asc' }, select: { name: true } }),
+    db.role.findMany({
+      where:   { deletedAt: null },
+      orderBy: { name: 'asc' },
+      select:  { id: true, name: true },
+    }),
   ]);
 
   if (!user) notFound();
@@ -46,7 +50,7 @@ export default async function EditUserPage({
   return (
     <UserForm
       action={action}
-      roles={roleRows.map((r) => r.name)}
+      roles={roleRows}
       user={user}
       mode="edit"
     />

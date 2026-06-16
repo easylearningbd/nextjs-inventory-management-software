@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { can } from '@/lib/can';
 import { db } from '@/lib/db';
-import { PERMISSIONS, PERMISSION_SET } from '@/lib/permissions';
+import { PERMISSION_SET } from '@/lib/permissions';
 
 
 // ── Schema ────────────────────────────────────────────────────────────────────
@@ -82,6 +82,21 @@ export async function updateRole(
   });
   if (nameConflict) return { error: `A role named "${name}" already exists.` };
 
+  // Guard (b): at least one active role must always retain 'Manage Roles'.
+  if (!permissions.includes('Manage Roles')) {
+    const currentHasIt = await db.rolePermission.findUnique({
+      where: { roleId_permission: { roleId: id, permission: 'Manage Roles' } },
+    });
+    if (currentHasIt) {
+      const othersWithIt = await db.rolePermission.count({
+        where: { permission: 'Manage Roles', roleId: { not: id }, role: { deletedAt: null } },
+      });
+      if (othersWithIt === 0) {
+        return { error: 'Cannot remove "Manage Roles" — no other active role has this permission. Assign it elsewhere first.' };
+      }
+    }
+  }
+
   await db.$transaction([
     db.rolePermission.deleteMany({ where: { roleId: id } }),
     db.role.update({
@@ -108,6 +123,29 @@ export async function deleteRole(id: number): Promise<RoleState> {
     select: { name: true },
   });
   if (!existing) return { error: 'Role not found.' };
+
+  // Guard (a): block if any users are still assigned to this role.
+  const assignedCount = await db.user.count({
+    where: { roleId: id, deletedAt: null },
+  });
+  if (assignedCount > 0) {
+    return {
+      error: `Cannot delete "${existing.name}" — ${assignedCount} user${assignedCount === 1 ? ' is' : 's are'} assigned to this role. Reassign them first.`,
+    };
+  }
+
+  // Guard (b): block if this is the only active role with 'Manage Roles'.
+  const hasManageRoles = await db.rolePermission.findUnique({
+    where: { roleId_permission: { roleId: id, permission: 'Manage Roles' } },
+  });
+  if (hasManageRoles) {
+    const othersWithIt = await db.rolePermission.count({
+      where: { permission: 'Manage Roles', roleId: { not: id }, role: { deletedAt: null } },
+    });
+    if (othersWithIt === 0) {
+      return { error: `Cannot delete "${existing.name}" — it is the only role with "Manage Roles". Assign that permission to another role first.` };
+    }
+  }
 
   await db.role.update({ where: { id }, data: { deletedAt: new Date() } });
 
