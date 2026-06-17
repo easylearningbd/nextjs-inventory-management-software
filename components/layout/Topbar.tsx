@@ -12,6 +12,14 @@ import {
   User, KeyRound, LogOut,
 } from 'lucide-react';
 
+const RPT_TABS = [
+  { label: 'Warehouse Reports',            href: '/reports/warehouse' },
+  { label: 'Sale Reports',                 href: '/reports/sale' },
+  { label: 'Stock Reports',                href: '/reports/stock' },
+  { label: 'Purchase Reports',             href: '/reports/purchase' },
+  { label: 'Top Selling Products Reports', href: '/reports/top-selling' },
+] as const;
+
 const PAGE_META: Record<string, { title: string; icon: React.ReactNode }> = {
   '/dashboard':           { title: 'Dashboard',          icon: <LayoutDashboard size={18} /> },
   '/products':            { title: 'Products',            icon: <Boxes size={18} /> },
@@ -132,6 +140,23 @@ export default function Topbar({ onToggleSidebar, userName, userInitial }: Topba
           <span className="gg-page-chip">{meta.icon}</span>
           <span className="gg-breadcrumb">{meta.title}</span>
         </div>
+      )}
+
+      {pathname.startsWith('/reports') && (
+        <nav className="rpt-tabs">
+          {RPT_TABS.map((tab) => (
+            <Link
+              key={tab.href}
+              href={tab.href}
+              className={`rpt-tab${pathname.startsWith(tab.href) ? ' is-active' : ''}`}
+            >
+              {tab.label}
+            </Link>
+          ))}
+          <span className="rpt-tab rpt-more">
+            More <ChevronDown size={15} />
+          </span>
+        </nav>
       )}
 
       <div className="gg-topbar-spacer" />
