@@ -665,7 +665,14 @@ export default function PosScreen({
                       className={`pcard${inCart ? ' in-cart' : ''}`}
                       onClick={() => addToCart(p)}
                     >
-                      <div className="ph" style={{ background: cardGradient(p.id) }}>
+                      <div
+                        className="ph"
+                        style={p.image ? undefined : { background: cardGradient(p.id) }}
+                      >
+                        {p.image
+                          ? <img src={p.image} alt={p.name} className="ph-img" />
+                          : <Sparkles size={46} style={{ color: 'rgba(255,255,255,.9)' }} />
+                        }
                         <span className="tag price gg-num">$ {money(p.price)}</span>
                         <span className={`tag stock gg-num${atMax ? ' is-warn' : ''}`}>
                           {p.stock} {p.productUnit}
@@ -673,7 +680,6 @@ export default function PosScreen({
                         {inCart && (
                           <span className="tag qty-tag gg-num">In cart: {cartQty}</span>
                         )}
-                        <Sparkles size={46} style={{ color: 'rgba(255,255,255,.9)' }} />
                       </div>
                       <div className="body">
                         <div className="nm">{p.name}</div>

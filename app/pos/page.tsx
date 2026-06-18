@@ -10,7 +10,14 @@ export type PosProduct = {
   categoryId:  number;
   brandId:     number;
   productUnit: string;
+  image:       string | null;
 };
+
+function parseFirstImage(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  try { const a = JSON.parse(raw); return Array.isArray(a) && a[0] ? a[0] : null; }
+  catch { return null; }
+}
 
 export type PosCategory  = { id: number; name: string };
 export type PosBrand     = { id: number; name: string };
@@ -71,6 +78,7 @@ export default async function PosPage({
           productUnit: true,
           categoryId:  true,
           brandId:     true,
+          images:      true,
         },
       },
     },
@@ -88,6 +96,7 @@ export default async function PosPage({
       categoryId:  s.product.categoryId,
       brandId:     s.product.brandId,
       productUnit: s.product.productUnit,
+      image:       parseFirstImage(s.product.images),
     }));
 
   const catIds   = [...new Set(products.map((p) => p.categoryId))];
